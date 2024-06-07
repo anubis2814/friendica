@@ -4,7 +4,7 @@
 {{if !$is_child_user}}
 	<h3>{{$l10n.account_header}}</h3>
 	<div id="add-account-desc" class="add-account-desc"><p>{{$l10n.account_desc}}</p></div>
-	<p><a href="register">{{$l10n.add_account}}</a></p>
+	<p><a href="register"><button type="add_account" name="add_account" value="{{$l10n.add_account}}">{{$l10n.add_account}}</button></a></p>
 {{/if}}
 
 {{if $parent_user}}
