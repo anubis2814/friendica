@@ -28,6 +28,7 @@ use Friendica\DI;
 use Friendica\Model\User;
 use Friendica\Module\Security\Login;
 use Friendica\Protocol\ActivityPub;
+use Friendica\Protocol\ZOT;
 
 /**
  * Home module - Landing page of the current node
@@ -38,6 +39,8 @@ class Home extends BaseModule
 	{
 		if (ActivityPub::isRequest()) {
 			DI::baseUrl()->redirect(User::getActorName());
+		} elseif (ZOT::isRequest()) {
+			$this->jsonExit(ZOT::getSiteInfo(), 'application/x-zot+json');
 		}
 	}
 

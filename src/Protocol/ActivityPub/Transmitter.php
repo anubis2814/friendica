@@ -162,7 +162,7 @@ class Transmitter
 	public static function getContacts(array $owner, array $rel, string $module, int $page = null, string $requester = null, bool $nocache = false): array
 	{
 		if (empty($page)) {
-			$cachekey = self::CACHEKEY_CONTACTS . $module . ':'. $owner['uid'];
+			$cachekey = self::CACHEKEY_CONTACTS . $module . ':' . $owner['uid'];
 			$result = DI::cache()->get($cachekey);
 			if (!$nocache && !is_null($result)) {
 				return $result;
@@ -262,8 +262,10 @@ class Transmitter
 
 		$owner_cid = Contact::getIdForURL($owner['url'], 0, false);
 
-		$condition = ["`uri-id` IN (SELECT `uri-id` FROM `collection-view` WHERE `cid` = ? AND `type` = ?)",
-			$owner_cid, Post\Collection::FEATURED];
+		$condition = [
+			"`uri-id` IN (SELECT `uri-id` FROM `collection-view` WHERE `cid` = ? AND `type` = ?)",
+			$owner_cid, Post\Collection::FEATURED
+		];
 
 		$condition = DBA::mergeConditions($condition, [
 			'uid'           => $owner['uid'],
@@ -377,8 +379,10 @@ class Transmitter
 		$data['name'] = $full ? $owner['name'] : $owner['nick'];
 
 		if ($full && !empty($owner['country-name'] . $owner['region'] . $owner['locality'])) {
-			$data['vcard:hasAddress'] = ['@type' => 'vcard:Home', 'vcard:country-name' => $owner['country-name'],
-				'vcard:region' => $owner['region'], 'vcard:locality' => $owner['locality']];
+			$data['vcard:hasAddress'] = [
+				'@type' => 'vcard:Home', 'vcard:country-name' => $owner['country-name'],
+				'vcard:region' => $owner['region'], 'vcard:locality' => $owner['locality']
+			];
 		}
 
 		if ($full && !empty($owner['about'])) {
@@ -399,9 +403,11 @@ class Transmitter
 		$data['url'] = $owner['url'];
 		$data['manuallyApprovesFollowers'] = in_array($owner['page-flags'], [User::PAGE_FLAGS_NORMAL, User::PAGE_FLAGS_PRVGROUP]);
 		$data['discoverable'] = (bool)$owner['net-publish'] && $full;
-		$data['publicKey'] = ['id' => $owner['url'] . '#main-key',
+		$data['publicKey'] = [
+			'id' => $owner['url'] . '#main-key',
 			'owner' => $owner['url'],
-			'publicKeyPem' => $owner['pubkey']];
+			'publicKeyPem' => $owner['pubkey']
+		];
 		$data['endpoints'] = ['sharedInbox' => DI::baseUrl() . '/inbox'];
 		if ($full && $uid != 0) {
 			$data['icon'] = ['type' => 'Image', 'url' => User::getAvatarUrl($owner)];
@@ -842,7 +848,7 @@ class Transmitter
 
 		if (($key = array_search($item['author-link'], $data['bcc'])) !== false) {
 			unset($data['bcc'][$key]);
-		}	
+		}
 
 		foreach ($data['to'] as $to) {
 			if (($key = array_search($to, $data['cc'])) !== false) {
@@ -1201,7 +1207,7 @@ class Transmitter
 		$mail['sensitive']        = false;
 		$mail['author-link']      = $mail['owner-link'] = $mail['from-url'];
 		$mail['owner-id']         = $mail['author-id'];
-		$mail['allow_cid']        = '<'.$mail['contact-id'].'>';
+		$mail['allow_cid']        = '<' . $mail['contact-id'] . '>';
 		$mail['allow_gid']        = '';
 		$mail['deny_cid']         = '';
 		$mail['deny_gid']         = '';
@@ -1212,7 +1218,7 @@ class Transmitter
 		$mail['parent-uri']       = $reply['uri'];
 		$mail['parent-uri-id']    = $reply['uri-id'];
 		$mail['parent-author-id'] = Contact::getIdForURL($reply['from-url'], 0, false);
-		$mail['gravity']          = ($mail['reply'] ? Item::GRAVITY_COMMENT: Item::GRAVITY_PARENT);
+		$mail['gravity']          = ($mail['reply'] ? Item::GRAVITY_COMMENT : Item::GRAVITY_PARENT);
 		$mail['event-type']       = '';
 		$mail['language']         = '';
 		$mail['parent']           = 0;
@@ -1655,10 +1661,12 @@ class Transmitter
 			}
 			$urls[] = $attachment['url'];
 
-			$attach = ['type' => 'Document',
+			$attach = [
+				'type' => 'Document',
 				'mediaType' => $attachment['mimetype'],
 				'url' => $attachment['url'],
-				'name' => $attachment['description']];
+				'name' => $attachment['description']
+			];
 
 			if (!empty($attachment['height'])) {
 				$attach['height'] = $attachment['height'];
@@ -1788,11 +1796,34 @@ class Transmitter
 			$isCommunityPost = false;
 		}
 
+		$title   = $item['title'];
+		$summary = $item['content-warning'] ?: BBCode::toPlaintext(BBCode::getAbstract($item['body'], Protocol::ACTIVITYPUB));
+
 		if ($item['event-type'] == 'event') {
 			$type = 'Event';
-		} elseif (!empty($item['title'])) {
+		} elseif (!empty($title)) {
 			if (!$isCommunityPost || empty($link)) {
-				$type = 'Article';
+				switch (DI::pConfig()->get($item['uid'], 'system', 'article_mode') ?? ActivityPub::ARTICLE_DEFAULT) {
+					case ActivityPub::ARTICLE_DEFAULT:
+						$type = 'Article';
+						break;
+					case ActivityPub::ARTICLE_USE_SUMMARY:
+						$type = 'Note';
+						if (!$summary) {
+							$summary = $title;
+						} else {
+							$item['raw-body'] = '[h4][b]' . $title . "[/b][/h4]\n\n" . $item['raw-body'];
+							$item['body']     = '[h4][b]' . $title . "[/b][/h4]\n\n" . $item['body'];
+						}
+						$title = '';
+						break;
+					case ActivityPub::ARTICLE_EMBED_TITLE:
+						$type = 'Note';
+						$item['raw-body'] = '[b]' . $title . "[/b]\n\n" . $item['raw-body'];
+						$item['body']     = '[b]' . $title . "[/b]\n\n" . $item['body'];
+						$title = '';
+						break;
+				}
 			} else {
 				// "Page" is used by Lemmy for posts that contain an external link
 				$type = 'Page';
@@ -1812,8 +1843,6 @@ class Transmitter
 		if ($item['deleted']) {
 			return $data;
 		}
-
-		$data['summary'] = $item['content-warning'] ?: BBCode::toPlaintext(BBCode::getAbstract($item['body'], Protocol::ACTIVITYPUB));
 
 		if ($item['uri'] != $item['thr-parent']) {
 			$data['inReplyTo'] = $item['thr-parent'];
@@ -1840,8 +1869,12 @@ class Transmitter
 			$data['conversation'] = $data['context'] = $item['conversation'];
 		}
 
-		if (!empty($item['title'])) {
-			$data['name'] = BBCode::toPlaintext($item['title'], false);
+		if (!empty($title)) {
+			$data['name'] = BBCode::toPlaintext($title, false);
+		}
+
+		if (!empty($summary)) {
+			$data['summary'] = $summary;
 		}
 
 		$permission_block = self::getReceiversForUriId($item['uri-id'], false);
@@ -2102,8 +2135,8 @@ class Transmitter
 			return false;
 		}
 
-		$hash = hash('ripemd128', $contact['uid'].'-'.$contact['id'].'-'.$contact['created']);
-		$uuid = substr($hash, 0, 8). '-' . substr($hash, 8, 4) . '-' . substr($hash, 12, 4) . '-' . substr($hash, 16, 4) . '-' . substr($hash, 20, 12);
+		$hash = hash('ripemd128', $contact['uid'] . '-' . $contact['id'] . '-' . $contact['created']);
+		$uuid = substr($hash, 0, 8) . '-' . substr($hash, 8, 4) . '-' . substr($hash, 12, 4) . '-' . substr($hash, 16, 4) . '-' . substr($hash, 20, 12);
 		return DI::baseUrl() . '/activity/' . $uuid;
 	}
 
@@ -2181,7 +2214,8 @@ class Transmitter
 			return false;
 		}
 
-		$data = ['@context' => ActivityPub::CONTEXT,
+		$data = [
+			'@context' => ActivityPub::CONTEXT,
 			'id' => DI::baseUrl() . '/activity/' . System::createGUID(),
 			'type' => 'Delete',
 			'actor' => $owner['url'],
@@ -2189,7 +2223,8 @@ class Transmitter
 			'published' => DateTimeFormat::utcNow(DateTimeFormat::ATOM),
 			'instrument' => self::getService(),
 			'to' => [ActivityPub::PUBLIC_COLLECTION],
-			'cc' => []];
+			'cc' => []
+		];
 
 		$signed = LDSignature::sign($data, $owner);
 
@@ -2211,7 +2246,8 @@ class Transmitter
 	{
 		$profile = APContact::getByURL($owner['url']);
 
-		$data = ['@context' => ActivityPub::CONTEXT,
+		$data = [
+			'@context' => ActivityPub::CONTEXT,
 			'id' => DI::baseUrl() . '/activity/' . System::createGUID(),
 			'type' => 'Update',
 			'actor' => $owner['url'],
@@ -2219,7 +2255,8 @@ class Transmitter
 			'published' => DateTimeFormat::utcNow(DateTimeFormat::ATOM),
 			'instrument' => self::getService(),
 			'to' => [$profile['followers']],
-			'cc' => []];
+			'cc' => []
+		];
 
 		$signed = LDSignature::sign($data, $owner);
 
@@ -2304,8 +2341,10 @@ class Transmitter
 			$uid = $admin['uid'];
 		}
 
-		$condition = ['verb' => Activity::FOLLOW, 'uid' => 0, 'parent-uri' => $object,
-			'author-id' => Contact::getPublicIdByUserId($uid)];
+		$condition = [
+			'verb' => Activity::FOLLOW, 'uid' => 0, 'parent-uri' => $object,
+			'author-id' => Contact::getPublicIdByUserId($uid)
+		];
 		if (Post::exists($condition)) {
 			Logger::info('Follow for ' . $object . ' for user ' . $uid . ' does already exist.');
 			return false;
@@ -2474,7 +2513,8 @@ class Transmitter
 
 		foreach (Tag::getByURIId($uriid, [Tag::IMPLICIT_MENTION]) as $tag) {
 			$profile = Contact::getByURL($tag['url'], false, ['addr', 'contact-type', 'nick']);
-			if (!empty($profile['addr'])
+			if (
+				!empty($profile['addr'])
 				&& $profile['contact-type'] != Contact::TYPE_COMMUNITY
 				&& !strstr($body, $profile['addr'])
 				&& !strstr($body, $tag['url'])

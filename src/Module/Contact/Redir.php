@@ -23,17 +23,16 @@ namespace Friendica\Module\Contact;
 
 use Friendica\Core\L10n;
 use Friendica\App;
+use Friendica\Core\Protocol;
 use Friendica\Core\Session\Capability\IHandleUserSessions;
+use Friendica\Core\Worker;
 use Friendica\Database\Database;
 use Friendica\Model\Contact;
 use Friendica\Module\Response;
-use Friendica\Network\HTTPClient\Capability\ICanSendHttpRequests;
-use Friendica\Network\HTTPClient\Client\HttpClientAccept;
-use Friendica\Network\HTTPClient\Client\HttpClientOptions;
-use Friendica\Network\HTTPClient\Client\HttpClientRequest;
 use Friendica\Network\HTTPException;
 use Friendica\Util\Profiler;
 use Friendica\Util\Strings;
+use Friendica\Worker\UpdateContact;
 use Psr\Log\LoggerInterface;
 
 class Redir extends \Friendica\BaseModule
@@ -44,17 +43,14 @@ class Redir extends \Friendica\BaseModule
 	private $database;
 	/** @var App */
 	private $app;
-	/** @var ICanSendHttpRequests */
-	private $httpClient;
 
-	public function __construct(ICanSendHttpRequests $httpClient, App $app, Database $database, IHandleUserSessions $session, L10n $l10n, App\BaseURL $baseUrl, App\Arguments $args, LoggerInterface $logger, Profiler $profiler, Response $response, array $server, array $parameters = [])
+	public function __construct(App $app, Database $database, IHandleUserSessions $session, L10n $l10n, App\BaseURL $baseUrl, App\Arguments $args, LoggerInterface $logger, Profiler $profiler, Response $response, array $server, array $parameters = [])
 	{
 		parent::__construct($l10n, $baseUrl, $args, $logger, $profiler, $response, $server, $parameters);
 
 		$this->session    = $session;
 		$this->database   = $database;
 		$this->app        = $app;
-		$this->httpClient = $httpClient;
 	}
 
 	protected function rawContent(array $request = [])
@@ -89,17 +85,31 @@ class Redir extends \Friendica\BaseModule
 			$this->logger->info('Got my url', ['visitor' => $visitor]);
 		}
 
-		$contact = $this->database->selectFirst('contact', ['url'], ['id' => $cid]);
+		$contact = Contact::selectFirst(['id', 'url', 'gsid', 'alias', 'network'], ['id' => $cid]);
 		if (!$contact) {
 			$this->logger->info('Contact not found', ['id' => $cid]);
 			throw new HTTPException\NotFoundException($this->t('Contact not found.'));
-		} else {
-			$contact_url = $contact['url'];
-			$this->checkUrl($contact_url, $url);
-			$target_url = $url ?: $contact_url;
+		} elseif (empty($contact['gsid'])) {
+			$this->logger->info('Contact has got no server', ['id' => $cid]);
+			return;
 		}
 
-		$basepath = Contact::getBasepath($contact_url);
+		$contact_url = Contact::getProfileLink($contact);
+		$this->checkUrl($contact_url, $url);
+		$target_url = $url ?: $contact_url;
+
+		$gserver = $this->database->selectFirst('gserver', ['url', 'network', 'openwebauth'], ['id' => $contact['gsid']]);
+		$basepath = $gserver['url'];
+
+		// This part can be removed, when all server entries had been updated. So removing it in 2025 should be safe.
+		if (empty($gserver['openwebauth']) && ($gserver['network'] == Protocol::DFRN)) {
+			$this->logger->notice('Magic path not provided. Contact update initiated.', ['gsid' => $contact['gsid']]);
+			// Update contact to assign the path to the server
+			UpdateContact::add(Worker::PRIORITY_MEDIUM, $contact['id']);
+		} elseif (empty($gserver['openwebauth'])) {
+			$this->logger->debug('Server does not support open web auth.', ['server' => $gserver]);
+			return;
+		}
 
 		// We don't use magic auth when there is no visitor, we are on the same system, or we visit our own stuff
 		if (empty($visitor) || Strings::compareLink($basepath, $this->baseUrl) || Strings::compareLink($contact_url, $visitor)) {
@@ -107,17 +117,11 @@ class Redir extends \Friendica\BaseModule
 			$this->app->redirect($target_url);
 		}
 
-		// Test for magic auth on the target system
-		$response = $this->httpClient->head($basepath . '/magic', [HttpClientOptions::ACCEPT_CONTENT => HttpClientAccept::HTML, HttpClientOptions::REQUEST => HttpClientRequest::MAGICAUTH]);
-		if ($response->isSuccess()) {
-			$separator = strpos($target_url, '?') ? '&' : '?';
-			$target_url .= $separator . 'zrl=' . urlencode($visitor) . '&addr=' . urlencode($contact_url);
+		$separator = strpos($target_url, '?') ? '&' : '?';
+		$target_url .= $separator . 'zrl=' . urlencode($visitor) . '&addr=' . urlencode($contact_url);
 
-			$this->logger->info('Redirecting with magic', ['target' => $target_url, 'visitor' => $visitor, 'contact' => $contact_url]);
-			$this->app->redirect($target_url);
-		} else {
-			$this->logger->info('No magic for contact', ['contact' => $contact_url]);
-		}
+		$this->logger->info('Redirecting with magic', ['target' => $target_url, 'visitor' => $visitor, 'contact' => $contact_url]);
+		$this->app->redirect($target_url);
 	}
 
 	/**
@@ -135,33 +139,32 @@ class Redir extends \Friendica\BaseModule
 			throw new HTTPException\BadRequestException($this->t('Bad Request.'));
 		}
 
-		$fields  = ['id', 'uid', 'nurl', 'url', 'addr', 'name'];
-		$contact = $this->database->selectFirst('contact', $fields, ['id' => $cid, 'uid' => [0, $this->session->getLocalUserId()]]);
+		$fields  = ['id', 'uid', 'nurl', 'url', 'addr', 'name', 'alias', 'network'];
+		$contact = Contact::selectFirst($fields, ['id' => $cid, 'uid' => [0, $this->session->getLocalUserId()]]);
 		if (!$contact) {
 			throw new HTTPException\NotFoundException($this->t('Contact not found.'));
 		}
 
-		$contact_url = $contact['url'];
+		$contact_url = Contact::getProfileLink($contact);
+		$this->checkUrl($contact_url, $url);
+		$target_url = $url ?: $contact_url;
 
 		if (!empty($this->app->getContactId()) && $this->app->getContactId() == $cid) {
 			// Local user is already authenticated.
-			$this->checkUrl($contact_url, $url);
-			$this->app->redirect($url ?: $contact_url);
+			$this->app->redirect($target_url);
 		}
 
 		if ($contact['uid'] == 0 && $this->session->getLocalUserId()) {
 			// Let's have a look if there is an established connection
 			// between the public contact we have found and the local user.
-			$contact = $this->database->selectFirst('contact', $fields, ['nurl' => $contact['nurl'], 'uid' => $this->session->getLocalUserId()]);
+			$contact = Contact::selectFirst($fields, ['nurl' => $contact['nurl'], 'uid' => $this->session->getLocalUserId()]);
 			if ($contact) {
 				$cid = $contact['id'];
 			}
 
 			if (!empty($this->app->getContactId()) && $this->app->getContactId() == $cid) {
 				// Local user is already authenticated.
-				$this->checkUrl($contact_url, $url);
-				$target_url = $url ?: $contact_url;
-				$this->logger->info($contact['name'] . " is already authenticated. Redirecting to " . $target_url);
+				$this->logger->info('Contact already authenticated. Redirecting to target url', ['url' => $contact['url'], 'name' => $contact['name'], 'target_url' => $target_url]);
 				$this->app->redirect($target_url);
 			}
 		}
@@ -176,29 +179,23 @@ class Redir extends \Friendica\BaseModule
 			// contact.
 			if (($host == $remotehost) && ($this->session->getRemoteContactID($this->session->get('visitor_visiting')) == $this->session->get('visitor_id'))) {
 				// Remote user is already authenticated.
-				$this->checkUrl($contact_url, $url);
-				$target_url = $url ?: $contact_url;
-				$this->logger->info($contact['name'] . " is already authenticated. Redirecting to " . $target_url);
+				$this->logger->info('Contact already authenticated. Redirecting to target url', ['url' => $contact['url'], 'name' => $contact['name'], 'target_url' => $target_url]);
 				$this->app->redirect($target_url);
 			}
-		}
-
-		if (empty($url)) {
-			throw new HTTPException\BadRequestException($this->t('Bad Request.'));
 		}
 
 		// If we don't have a connected contact, redirect with
 		// the 'zrl' parameter.
 		$my_profile = $this->session->getMyUrl();
 
-		if (!empty($my_profile) && !Strings::compareLink($my_profile, $url)) {
-			$separator = strpos($url, '?') ? '&' : '?';
+		if (!empty($my_profile) && !Strings::compareLink($my_profile, $target_url)) {
+			$separator = strpos($target_url, '?') ? '&' : '?';
 
-			$url .= $separator . 'zrl=' . urlencode($my_profile);
+			$target_url .= $separator . 'zrl=' . urlencode($my_profile);
 		}
 
-		$this->logger->info('redirecting to ' . $url);
-		$this->app->redirect($url);
+		$this->logger->info('redirecting to ' . $target_url);
+		$this->app->redirect($target_url);
 	}
 
 

@@ -34,12 +34,12 @@ use Friendica\DI;
 use Friendica\Model\User;
 use Friendica\Network\HTTPException;
 use Friendica\Security\TwoFactor\Repository\TrustedBrowser;
-use Friendica\Util\DateTimeFormat;
 use Friendica\Util\Network;
 use LightOpenID;
 use Friendica\Core\L10n;
 use Friendica\Core\Worker;
 use Friendica\Model\Contact;
+use Friendica\Util\Strings;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -146,7 +146,7 @@ class Authentication
 				$this->cookie->send();
 
 				// Do the authentication if not done by now
-				if (!$this->session->get('authenticated')) {
+				if (!$this->session->isAuthenticated()) {
 					$this->setForUser($a, $user);
 
 					if ($this->config->get('system', 'paranoia')) {
@@ -156,46 +156,44 @@ class Authentication
 			}
 		}
 
-		if ($this->session->get('authenticated')) {
-			if ($this->session->get('visitor_id') && !$this->session->get('uid')) {
-				$contact = $this->dba->selectFirst('contact', ['id'], ['id' => $this->session->get('visitor_id')]);
-				if ($this->dba->isResult($contact)) {
-					$a->setContactId($contact['id']);
-				}
+		if ($this->session->isVisitor()) {
+			$contact = $this->dba->selectFirst('contact', ['id'], ['id' => $this->session->get('visitor_id')]);
+			if ($this->dba->isResult($contact)) {
+				$a->setContactId($contact['id']);
 			}
+		}
 
-			if ($this->session->get('uid')) {
-				// already logged in user returning
-				$check = $this->config->get('system', 'paranoia');
-				// extra paranoia - if the IP changed, log them out
-				if ($check && ($this->session->get('addr') != $this->remoteAddress)) {
-					$this->logger->notice('Session address changed. Paranoid setting in effect, blocking session. ', [
-						'addr'        => $this->session->get('addr'),
-						'remote_addr' => $this->remoteAddress
-					]
-					);
-					$this->session->clear();
-					$this->baseUrl->redirect();
-				}
-
-				$user = $this->dba->selectFirst(
-					'user',
-					[],
-					[
-						'uid'             => $this->session->get('uid'),
-						'blocked'         => false,
-						'account_expired' => false,
-						'account_removed' => false,
-						'verified'        => true,
-					]
+		if ($this->session->isAuthenticated()) {
+			// already logged in user returning
+			$check = $this->config->get('system', 'paranoia');
+			// extra paranoia - if the IP changed, log them out
+			if ($check && ($this->session->get('addr') != $this->remoteAddress)) {
+				$this->logger->notice('Session address changed. Paranoid setting in effect, blocking session. ', [
+					'addr'        => $this->session->get('addr'),
+					'remote_addr' => $this->remoteAddress
+				]
 				);
-				if (!$this->dba->isResult($user)) {
-					$this->session->clear();
-					$this->baseUrl->redirect();
-				}
-
-				$this->setForUser($a, $user);
+				$this->session->clear();
+				$this->baseUrl->redirect();
 			}
+
+			$user = $this->dba->selectFirst(
+				'user',
+				[],
+				[
+					'uid'             => $this->session->get('uid'),
+					'blocked'         => false,
+					'account_expired' => false,
+					'account_removed' => false,
+					'verified'        => true,
+				]
+			);
+			if (!$this->dba->isResult($user)) {
+				$this->session->clear();
+				$this->baseUrl->redirect();
+			}
+
+			$this->setForUser($a, $user);
 		}
 	}
 
@@ -444,6 +442,27 @@ class Authentication
 			throw new HTTPException\ForbiddenException();
 		} else {
 			$this->baseUrl->redirect('2fa');
+		}
+	}
+
+	/**
+	 * Set the URL of an unauthenticated visitor
+	 *
+	 * @param string $url
+	 * @return void
+	 */
+	public function setUnauthenticatedVisitor(string $url)
+	{
+		if (Strings::compareLink($this->session->get('visitor_home'), $url)) {
+			return;
+		}
+		
+		$this->session->set('my_url', $url);
+		$this->session->set('authenticated', 0);
+		
+		$remote_contact = Contact::getByURL($url, false, ['subscribe']);
+		if (!empty($remote_contact['subscribe'])) {
+			$this->session->set('remote_comment', $remote_contact['subscribe']);
 		}
 	}
 }

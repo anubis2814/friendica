@@ -98,14 +98,19 @@ As a friend, you can both communicate with each other.
 
 diaspora* uses a different terminology, and you are given the option of allowing them to "share with you", or being full friends.
 
-Ignoring, blocking and deleting contacts
+Deleting
 ---
-Once you have become friends, if you find the person constantly sends you spam or worthless information, you can "Ignore" them - without breaking off the friendship or even alerting them to the fact that you aren't interested in anything they are saying.
-In many ways they are like a "follower" - but they don't know this.
-They think they are a friend.
 
-You can also "block" a person.
-This completely blocks communications with that person.
-They may still be able to see your public posts, as can anybody in the world, but they cannot communicate with you directly.
+You can delete a friend no matter what the friendship status - which completely removes everything relating to that person from your website.
 
-You can also delete a friend no matter what the friendship status - which completely removes everything relating to that person from your website.
+Unwanted Behaviour
+---
+
+If a contact engages in abuse, harrassment, or other unwanted behaviour, there are various actions you can take.
+These include:
+
+* Reporting them to your administrator, optionally also their administrator
+* Ignoring the contact, so that you will not see their posts
+* Blocking the contact from receiving your posts
+
+For more information, see [Safety](help/Safety).

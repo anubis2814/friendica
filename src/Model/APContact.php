@@ -84,13 +84,9 @@ class APContact
 
 			if (!empty($link['template']) && ($link['rel'] == ActivityNamespace::OSTATUSSUB)) {
 				$data['subscribe'] = $link['template'];
-			}
-
-			if (!empty($link['href']) && !empty($link['type']) && ($link['rel'] == 'self') && ($link['type'] == 'application/activity+json')) {
+			} elseif (!empty($link['href']) && !empty($link['type']) && ($link['rel'] == 'self') && ($link['type'] == 'application/activity+json')) {
 				$data['url'] = $link['href'];
-			}
-
-			if (!empty($link['href']) && !empty($link['type']) && ($link['rel'] == ActivityNamespace::WEBFINGERPROFILE) && ($link['type'] == 'text/html')) {
+			} elseif (!empty($link['href']) && !empty($link['type']) && ($link['rel'] == ActivityNamespace::WEBFINGERPROFILE) && ($link['type'] == 'text/html')) {
 				$data['alias'] = $link['href'];
 			}
 		}
@@ -199,7 +195,7 @@ class APContact
 				$failed = empty($curlResult) || empty($curlResult->getBodyString()) ||
 					(!$curlResult->isSuccess() && ($curlResult->getReturnCode() != 410));
 
-				if (!$failed) {
+					if (!$failed) {
 					$data = json_decode($curlResult->getBodyString(), true);
 					$failed = empty($data) || !is_array($data);
 				}

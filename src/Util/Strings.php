@@ -498,7 +498,8 @@ class Strings
 
 		$blocks = [];
 
-		$return = preg_replace_callback($regex,
+		$return = preg_replace_callback(
+			$regex,
 			function ($matches) use ($executionId, &$blocks) {
 				$return = '«block-' . $executionId . '-' . count($blocks) . '»';
 
@@ -516,7 +517,8 @@ class Strings
 		$text = $callback($return ?? $text) ?? '';
 
 		// Restore code blocks
-		$text = preg_replace_callback('/«block-' . $executionId . '-([0-9]+)»/iU',
+		$text = preg_replace_callback(
+			'/«block-' . $executionId . '-([0-9]+)»/iU',
 			function ($matches) use ($blocks) {
 				$return = $matches[0];
 				if (isset($blocks[intval($matches[1])])) {
@@ -545,10 +547,10 @@ class Strings
 			return $shorthand;
 		}
 
-		$last      = strtolower($shorthand[strlen($shorthand)-1]);
+		$last      = strtolower($shorthand[strlen($shorthand) - 1]);
 		$shorthand = substr($shorthand, 0, -1);
 
-		switch($last) {
+		switch ($last) {
 			case 'g':
 				$shorthand *= 1024;
 			case 'm':

@@ -24,6 +24,7 @@ Fields
 | directory-type        | Type of directory service (Poco, Mastodon)         | tinyint          | YES  |     | 0                   |                |
 | poco                  |                                                    | varbinary(383)   | NO   |     |                     |                |
 | openwebauth           | Path to the OpenWebAuth endpoint                   | varbinary(383)   | YES  |     | NULL                |                |
+| authredirect          | Path to the authRedirect endpoint                  | varbinary(383)   | YES  |     | NULL                |                |
 | noscrape              |                                                    | varbinary(383)   | NO   |     |                     |                |
 | network               |                                                    | char(4)          | NO   |     |                     |                |
 | protocol              | The protocol of the server                         | tinyint unsigned | YES  |     | NULL                |                |

@@ -1467,3 +1467,14 @@ function update_1560()
 		return Update::FAILED;
 	}
 }
+
+function update_1564()
+{
+	$users = DBA::select('user', ['uid'], ['blocked' => true]);
+	while ($user = DBA::fetch($users)) {
+		User::block($user['uid']);
+	}
+	DBA::close($users);
+
+	return Update::SUCCESS;
+}

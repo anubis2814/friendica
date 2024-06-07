@@ -29,6 +29,7 @@ use Friendica\Network\HTTPClient\Client\HttpClientAccept;
 use Friendica\Network\HTTPClient\Client\HttpClientOptions;
 use Friendica\Network\HTTPClient\Client\HttpClientRequest;
 use Friendica\Network\HTTPException\NotModifiedException;
+use GuzzleHttp\Psr7\Exception\MalformedUriException;
 use GuzzleHttp\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
 
@@ -669,5 +670,29 @@ class Network
 			Logger::debug('Invalid URI', ['code' => $e->getCode(), 'message' => $e->getMessage(), 'uri' => $uri]);
 			return null;
 		}
+	}
+
+	/**
+	 * Remove an Url parameter
+	 *
+	 * @param string $url 
+	 * @param string $parameter 
+	 * @return string 
+	 * @throws MalformedUriException 
+	 */
+	public static function removeUrlParameter(string $url, string $parameter): string
+	{
+		$parts = parse_url($url);
+		if (empty($parts['query'])) {
+			return $url;
+		}
+
+		parse_str($parts['query'], $data);
+
+		unset($data[$parameter]);
+
+		$parts['query'] = http_build_query($data);
+
+		return (string)Uri::fromParts($parts);
 	}
 }

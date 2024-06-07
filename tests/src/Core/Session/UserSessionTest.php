@@ -190,12 +190,20 @@ class UserSessionTest extends MockedTest
 			'authenticated' => [
 				'data' => [
 					'authenticated' => true,
+					'uid'           => 21,
 				],
 				'expected' => true,
 			],
 			'not_authenticated' => [
 				'data' => [
 					'authenticated' => false,
+				],
+				'expected' => false,
+			],
+			'remote_visitor' => [
+				'data' => [
+					'authenticated' => true,
+					'visitor_id'    => 21,
 				],
 				'expected' => false,
 			],
@@ -214,5 +222,105 @@ class UserSessionTest extends MockedTest
 	{
 		$userSession = new UserSession(new ArraySession($data));
 		$this->assertEquals($expected, $userSession->isAuthenticated());
+	}
+
+	public function dataIsVisitor()
+	{
+		return [
+			'local_user' => [
+				'data' => [
+					'authenticated' => true,
+					'uid'           => 21,
+				],
+				'expected' => false,
+			],
+			'not_authenticated' => [
+				'data' => [
+					'authenticated' => false,
+				],
+				'expected' => false,
+			],
+			'remote_visitor' => [
+				'data' => [
+					'authenticated' => true,
+					'visitor_id'    => 21,
+				],
+				'expected' => true,
+			],
+			'remote_unauthenticated_visitor' => [
+				'data' => [
+					'authenticated' => false,
+					'visitor_id'    => 21,
+				],
+				'expected' => false,
+			],
+			'missing' => [
+				'data' => [
+				],
+				'expected' => false,
+			],
+		];
+	}
+
+	/**
+	 * @dataProvider dataIsVisitor
+	 */
+	public function testIsVisitor(array $data, $expected)
+	{
+		$userSession = new UserSession(new ArraySession($data));
+		$this->assertEquals($expected, $userSession->isVisitor());
+	}
+
+	public function dataIsUnauthenticated()
+	{
+		return [
+			'local_user' => [
+				'data' => [
+					'authenticated' => true,
+					'uid'           => 21,
+				],
+				'expected' => false,
+			],
+			'not_authenticated' => [
+				'data' => [
+					'authenticated' => false,
+				],
+				'expected' => true,
+			],
+			'authenticated' => [
+				'data' => [
+					'authenticated' => true,
+				],
+				'expected' => false,
+			],
+			'remote_visitor' => [
+				'data' => [
+					'authenticated' => true,
+					'visitor_id'    => 21,
+				],
+				'expected' => false,
+			],
+			'remote_unauthenticated_visitor' => [
+				'data' => [
+					'authenticated' => false,
+					'visitor_id'    => 21,
+				],
+				'expected' => true,
+			],
+			'missing' => [
+				'data' => [
+				],
+				'expected' => true,
+			],
+		];
+	}
+
+	/**
+	 * @dataProvider dataIsUnauthenticated
+	 */
+	public function testIsUnauthenticated(array $data, $expected)
+	{
+		$userSession = new UserSession(new ArraySession($data));
+		$this->assertEquals($expected, $userSession->isUnauthenticated());
 	}
 }

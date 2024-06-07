@@ -43,6 +43,7 @@ use Friendica\Database\DBA;
 use Friendica\Model\Item;
 use Friendica\Model\Post;
 use Friendica\Model\Post\Engagement;
+use Friendica\Model\Post\SearchIndex;
 use Friendica\Module\Response;
 use Friendica\Protocol\Activity;
 use Friendica\Util\DateTimeFormat;
@@ -381,7 +382,7 @@ class Timeline extends BaseModule
 		} elseif (is_numeric($this->selectedTab) && !empty($channel = $this->channelRepository->selectById($this->selectedTab, $uid))) {
 			$condition = $this->getUserChannelConditions($channel, $uid);
 			if (in_array($channel->circle, [-3, -4, -5])) {
-				$table = 'post-searchindex-user-view';
+				$table = SearchIndex::getSearchView();
 				$condition = DBA::mergeConditions($condition, ['uid' => $uid]);
 				$orders = ['-3' => 'created', '-4' => 'received', '-5' => 'commented'];
 				$this->order = $orders[$channel->circle];

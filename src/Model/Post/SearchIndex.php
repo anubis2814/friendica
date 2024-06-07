@@ -99,4 +99,14 @@ class SearchIndex
 		}
 		return DateTimeFormat::utc('now - ' . $days . ' day');
 	}
+
+	public static function getSearchTable(): string
+	{
+		return DI::config()->get('system', 'limited_search_scope') ? 'post-engagement' : 'post-searchindex';
+	}
+
+	public static function getSearchView(): string
+	{
+		return DI::config()->get('system', 'limited_search_scope') ? 'post-engagement-user-view' : 'post-searchindex-user-view';
+	}
 }

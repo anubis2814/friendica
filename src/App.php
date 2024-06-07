@@ -39,11 +39,10 @@ use Friendica\Core\L10n;
 use Friendica\Core\System;
 use Friendica\Core\Theme;
 use Friendica\Database\Database;
-use Friendica\Model\Contact;
-use Friendica\Model\Profile;
 use Friendica\Module\Special\HTTPException as ModuleHTTPException;
 use Friendica\Network\HTTPException;
 use Friendica\Protocol\ATProtocol\DID;
+use Friendica\Security\OpenWebAuth;
 use Friendica\Util\DateTimeFormat;
 use Friendica\Util\HTTPInputData;
 use Friendica\Util\HTTPSignature;
@@ -93,6 +92,9 @@ class App
 	private $currentTheme;
 	/** @var string The name of the current mobile theme */
 	private $currentMobileTheme;
+
+	/** @var Authentication */
+	private $auth;
 
 	/**
 	 * @var IManageConfigValues The config
@@ -279,8 +281,9 @@ class App
 	 * @param DbaDefinition               $dbaDefinition
 	 * @param ViewDefinition              $viewDefinition
 	 */
-	public function __construct(Database $database, IManageConfigValues $config, App\Mode $mode, BaseURL $baseURL, LoggerInterface $logger, Profiler $profiler, L10n $l10n, Arguments $args, IManagePersonalConfigValues $pConfig, IHandleUserSessions $session, DbaDefinition $dbaDefinition, ViewDefinition $viewDefinition)
+	public function __construct(Authentication $auth, Database $database, IManageConfigValues $config, App\Mode $mode, BaseURL $baseURL, LoggerInterface $logger, Profiler $profiler, L10n $l10n, Arguments $args, IManagePersonalConfigValues $pConfig, IHandleUserSessions $session, DbaDefinition $dbaDefinition, ViewDefinition $viewDefinition)
 	{
+		$this->auth           = $auth;
 		$this->database       = $database;
 		$this->config         = $config;
 		$this->mode           = $mode;
@@ -563,7 +566,7 @@ class App
 			if ($this->mode->isNormal() && !$this->mode->isBackend()) {
 				$requester = HTTPSignature::getSigner('', $server);
 				if (!empty($requester)) {
-					Profile::addVisitorCookieForHandle($requester);
+					OpenWebAuth::addVisitorCookieForHandle($requester);
 				}
 			}
 
@@ -573,17 +576,8 @@ class App
 				// Valid profile links contain a path with "/profile/" and no query parameters
 				if ((parse_url($_GET['zrl'], PHP_URL_QUERY) == '') &&
 					strpos(parse_url($_GET['zrl'], PHP_URL_PATH) ?? '', '/profile/') !== false) {
-					if ($this->session->get('visitor_home') != $_GET['zrl']) {
-						$this->session->set('my_url', $_GET['zrl']);
-						$this->session->set('authenticated', 0);
-
-						$remote_contact = Contact::getByURL($_GET['zrl'], false, ['subscribe']);
-						if (!empty($remote_contact['subscribe'])) {
-							$_SESSION['remote_comment'] = $remote_contact['subscribe'];
-						}
-					}
-
-					Model\Profile::zrlInit();
+					$this->auth->setUnauthenticatedVisitor($_GET['zrl']);
+					OpenWebAuth::zrlInit();
 				} else {
 					// Someone came with an invalid parameter, maybe as a DDoS attempt
 					// We simply stop processing here
@@ -594,14 +588,14 @@ class App
 
 			if (!empty($_GET['owt']) && $this->mode->isNormal()) {
 				$token = $_GET['owt'];
-				Model\Profile::openWebAuthInit($token);
+				OpenWebAuth::init($token);
 			}
 
 			if (!$this->mode->isBackend()) {
 				$auth->withSession($this);
 			}
 
-			if (empty($_SESSION['authenticated'])) {
+			if ($this->session->isUnauthenticated()) {
 				header('X-Account-Management-Status: none');
 			}
 
@@ -619,6 +613,11 @@ class App
 				Core\Update::check($this->getBasePath(), false);
 				Core\Addon::loadAddons();
 				Core\Hook::loadHooks();
+			}
+
+			// Compatibility with Hubzilla
+			if ($moduleName == 'rpost') {
+				$this->baseURL->redirect('compose');
 			}
 
 			// Compatibility with the Android Diaspora client

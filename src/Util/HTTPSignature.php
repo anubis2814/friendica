@@ -281,7 +281,7 @@ class HTTPSignature
 		$content = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
 		// Header data that is about to be signed.
-		$host = parse_url($target, PHP_URL_HOST);
+		$host = strtolower(parse_url($target, PHP_URL_HOST));
 		$path = parse_url($target, PHP_URL_PATH);
 		$digest = 'SHA-256=' . base64_encode(hash('sha256', $content, true));
 		$content_length = strlen($content);
@@ -502,7 +502,7 @@ class HTTPSignature
 
 		if (!empty($owner['uprvkey'])) {
 			// Header data that is about to be signed.
-			$host = parse_url($request, PHP_URL_HOST);
+			$host = strtolower(parse_url($request, PHP_URL_HOST));
 			$path = parse_url($request, PHP_URL_PATH);
 			$date = DateTimeFormat::utcNow(DateTimeFormat::HTTP);
 

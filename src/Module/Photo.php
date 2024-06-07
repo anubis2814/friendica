@@ -21,7 +21,6 @@
 
 namespace Friendica\Module;
 
-use Friendica\BaseModule;
 use Friendica\Contact\Header;
 use Friendica\Core\Logger;
 use Friendica\Core\Protocol;
@@ -30,7 +29,6 @@ use Friendica\DI;
 use Friendica\Model\Contact;
 use Friendica\Model\Photo as MPhoto;
 use Friendica\Model\Post;
-use Friendica\Model\Profile;
 use Friendica\Core\Storage\Type\ExternalResource;
 use Friendica\Core\Storage\Type\SystemResource;
 use Friendica\Core\System;
@@ -42,8 +40,8 @@ use Friendica\Network\HTTPClient\Client\HttpClientRequest;
 use Friendica\Network\HTTPException;
 use Friendica\Network\HTTPException\NotModifiedException;
 use Friendica\Object\Image;
+use Friendica\Security\OpenWebAuth;
 use Friendica\Util\Images;
-use Friendica\Util\Network;
 use Friendica\Util\ParseUrl;
 use Friendica\Util\Proxy;
 use Friendica\Worker\UpdateContact;
@@ -78,7 +76,7 @@ class Photo extends BaseApi
 			throw new NotModifiedException();
 		}
 
-		Profile::addVisitorCookieForHTTPSigner($this->server);
+		OpenWebAuth::addVisitorCookieForHTTPSigner($this->server);
 
 		$customsize = 0;
 		$square_resize = true;

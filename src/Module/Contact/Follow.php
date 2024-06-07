@@ -32,12 +32,12 @@ use Friendica\Core\Session\Capability\IHandleUserSessions;
 use Friendica\Model\Contact;
 use Friendica\Model\Item;
 use Friendica\Model\Post;
-use Friendica\Model\Profile;
 use Friendica\Model\User;
 use Friendica\Module\Response;
 use Friendica\Navigation\SystemMessages;
 use Friendica\Network\HTTPException\ForbiddenException;
 use Friendica\Network\Probe;
+use Friendica\Security\OpenWebAuth;
 use Friendica\Util\Profiler;
 use Friendica\Util\Strings;
 use GuzzleHttp\Psr7\Uri;
@@ -175,7 +175,7 @@ class Follow extends BaseModule
 			'$action'   => $requestUrl,
 			'$name'     => $contact['name'],
 			'$url'      => $contact['url'],
-			'$zrl'      => Profile::zrl($contact['url']),
+			'$zrl'      => OpenWebAuth::getZrlUrl($contact['url']),
 			'$myaddr'   => $myaddr,
 			'$keywords' => $contact['keywords'],
 

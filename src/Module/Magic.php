@@ -36,6 +36,7 @@ use Friendica\Model\User;
 use Friendica\Network\HTTPClient\Capability\ICanSendHttpRequests;
 use Friendica\Network\HTTPClient\Client\HttpClientOptions;
 use Friendica\Util\HTTPSignature;
+use Friendica\Util\Network;
 use Friendica\Util\Profiler;
 use Friendica\Util\Strings;
 use Friendica\Worker\UpdateContact;
@@ -76,10 +77,12 @@ class Magic extends BaseModule
 
 		$this->logger->debug('Invoked', ['request' => $request]);
 
-		$addr  = $request['addr'] ?? '';
-		$dest  = $request['dest'] ?? '';
-		$bdest = $request['bdest'] ?? '';
-		$owa   = intval($request['owa'] ?? 0);
+		$addr     = $request['addr'] ?? '';
+		$bdest    = $request['bdest'] ?? '';
+		$dest     = $request['dest'] ?? '';
+		$rev      = intval($request['rev'] ?? 0);
+		$owa      = intval($request['owa'] ?? 0);
+		$delegate = $request['delegate'] ?? '';
 
 		// bdest is preferred as it is hex-encoded and can survive url rewrite and argument parsing
 		if (!empty($bdest)) {
@@ -113,6 +116,9 @@ class Magic extends BaseModule
 			$this->app->redirect($dest);
 		}
 
+		$dest = Network::removeUrlParameter($dest, 'zid');
+		$dest = Network::removeUrlParameter($dest, 'f');
+		
 		// OpenWebAuth
 		$owner = User::getOwnerDataById($this->userSession->getLocalUserId());
 
@@ -150,7 +156,7 @@ class Magic extends BaseModule
 
 		$header = [
 			'Accept'          => 'application/x-zot+json',
-			'X-Open-Web-Auth' => Strings::getRandomHex()
+			'X-Open-Web-Auth' => Strings::getRandomHex(),
 		];
 
 		// Create a header that is signed with the local users private key.

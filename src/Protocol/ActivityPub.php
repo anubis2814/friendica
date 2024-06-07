@@ -87,6 +87,11 @@ class ActivityPub
 		]
 	];
 	const ACCOUNT_TYPES = ['Person', 'Organization', 'Service', 'Group', 'Application', 'Tombstone'];
+
+	CONST ARTICLE_DEFAULT     = 0;
+	CONST ARTICLE_USE_SUMMARY = 1;
+	CONST ARTICLE_EMBED_TITLE = 2;
+
 	/**
 	 * Checks if the web request is done for the AP protocol
 	 *

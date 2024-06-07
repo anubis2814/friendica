@@ -28,6 +28,7 @@ use Friendica\DI;
 use Friendica\Model\Contact;
 use Friendica\Model\Item;
 use Friendica\Model\Post;
+use Friendica\Model\Post\SearchIndex;
 use Friendica\Model\Tag;
 use Friendica\Module\BaseApi;
 use Friendica\Util\Network;
@@ -159,7 +160,7 @@ class Search extends BaseApi
 		} else {
 			$q = Post\Engagement::escapeKeywords($q);
 			$condition = ["MATCH (`searchtext`) AGAINST (? IN BOOLEAN MODE) AND (NOT `restricted` OR `uri-id` IN (SELECT `uri-id` FROM `post-user` WHERE `uid` = ?))", $q, $uid];
-			$table = 'post-searchindex';
+			$table = SearchIndex::getSearchTable();
 		}
 
 		if (!empty($account_id)) {

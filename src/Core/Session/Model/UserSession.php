@@ -130,7 +130,7 @@ class UserSession implements IHandleUserSessions
 	/** {@inheritDoc} */
 	public function isAuthenticated(): bool
 	{
-		return $this->session->get('authenticated', false);
+		return $this->session->get('authenticated', false) && $this->getLocalUserId();
 	}
 
 	/** {@inheritDoc} */
@@ -145,6 +145,18 @@ class UserSession implements IHandleUserSessions
 		return User::isModerator($this->getLocalUserId());
 	}
 
+	/** {@inheritDoc} */
+	public function isVisitor(): bool
+	{
+		return $this->session->get('authenticated', false) && $this->session->get('visitor_id') && !$this->session->get('uid');
+	}
+
+	/** {@inheritDoc} */
+	public function isUnauthenticated(): bool
+	{
+		return !$this->session->get('authenticated', false);
+	}
+	
 	/** {@inheritDoc} */
 	public function setVisitorsContacts(string $my_url)
 	{

@@ -463,7 +463,7 @@ class Network extends Timeline
 			$params['order'] = [$this->order => true];
 		}
 
-		$items = $this->database->selectToArray('network-thread-view', [], DBA::mergeConditions($conditionFields, $conditionStrings), $params);
+		$items = $this->database->selectToArray($this->circleId ? 'network-thread-circle-view' : 'network-thread-view', [], DBA::mergeConditions($conditionFields, $conditionStrings), $params);
 
 		// min_id quirk, continued
 		if (isset($this->minId) && !isset($this->maxId)) {

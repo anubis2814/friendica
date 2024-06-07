@@ -80,9 +80,9 @@ interface IHandleUserSessions extends IHandleSessions
 	public function getMyUrl(): string;
 
 	/**
-	 * Returns if the current visitor is authenticated
+	 * Returns if the current visitor is a local user
 	 *
-	 * @return bool "true" when visitor is either a local or remote user
+	 * @return bool "true" when visitor is a local user
 	 */
 	public function isAuthenticated(): bool;
 
@@ -99,6 +99,20 @@ interface IHandleUserSessions extends IHandleSessions
 	 * @return bool true if user is a moderator
 	 */
 	public function isModerator(): bool;
+
+	/**
+	 * Returns if the current visitor is a verified remote user
+	 *
+	 * @return bool "true" when visitor is a verified remote user
+	 */
+	public function isVisitor(): bool;
+
+	/**
+	 * Returns if the current visitor is an unauthenticated user
+	 *
+	 * @return bool "true" when visitor is an unauthenticated user
+	 */
+	public function isUnauthenticated(): bool;
 
 	/**
 	 * Returns User ID of the managed user in case it's a different identity

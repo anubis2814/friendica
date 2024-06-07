@@ -32,7 +32,7 @@ use Friendica\Model\Contact;
 use Friendica\Model\Circle;
 use Friendica\Model\Item;
 use Friendica\Model\Post;
-use Friendica\Model\Profile;
+use Friendica\Security\OpenWebAuth;
 use Friendica\Util\DateTimeFormat;
 use Friendica\Util\Temporal;
 
@@ -85,7 +85,7 @@ class Widget
 		$nv['random'] = DI::l10n()->t('Random Profile');
 		$nv['inv'] = DI::l10n()->t('Invite Friends');
 		$nv['directory'] = DI::l10n()->t('Global Directory');
-		$nv['global_dir'] = Profile::zrl($global_dir, true);
+		$nv['global_dir'] = OpenWebAuth::getZrlUrl($global_dir, true);
 		$nv['local_directory'] = DI::l10n()->t('Local Directory');
 
 		$aside = [];

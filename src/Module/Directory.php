@@ -32,6 +32,7 @@ use Friendica\DI;
 use Friendica\Model;
 use Friendica\Model\Profile;
 use Friendica\Network\HTTPException;
+use Friendica\Security\OpenWebAuth;
 
 /**
  * Shows the local directory of this node
@@ -63,7 +64,7 @@ class Directory extends BaseModule
 		$gDirPath = '';
 		$dirURL = Search::getGlobalDirectory();
 		if (strlen($dirURL)) {
-			$gDirPath = Profile::zrl($dirURL, true);
+			$gDirPath = OpenWebAuth::getZrlUrl($dirURL, true);
 		}
 
 		$pager = new Pager(DI::l10n(), DI::args()->getQueryString(), 60);

@@ -578,7 +578,7 @@ class GServer
 			// We only follow redirects when the path stays the same or the target url has no path.
 			// Some systems have got redirects on their landing page to a single account page. This check handles it.
 			if (((parse_url($url, PHP_URL_HOST) != parse_url($valid_url, PHP_URL_HOST)) && (parse_url($url, PHP_URL_PATH) == parse_url($valid_url, PHP_URL_PATH))) ||
-				(((parse_url($url, PHP_URL_HOST) != parse_url($valid_url, PHP_URL_HOST)) || (parse_url($url, PHP_URL_PATH) != parse_url($valid_url, PHP_URL_PATH))) && empty(parse_url($valid_url, PHP_URL_PATH)))) {
+			(((parse_url($url, PHP_URL_HOST) != parse_url($valid_url, PHP_URL_HOST)) || (parse_url($url, PHP_URL_PATH) != parse_url($valid_url, PHP_URL_PATH))) && empty(parse_url($valid_url, PHP_URL_PATH)))) {
 				Logger::debug('Found redirect. Mark old entry as failure', ['old' => $url, 'new' => $valid_url]);
 				self::setFailureByUrl($url);
 				if (!self::getID($valid_url, true) && !Network::isUrlBlocked($valid_url)) {
@@ -588,7 +588,7 @@ class GServer
 			}
 
 			if ((parse_url($url, PHP_URL_HOST) != parse_url($valid_url, PHP_URL_HOST)) && (parse_url($url, PHP_URL_PATH) != parse_url($valid_url, PHP_URL_PATH)) &&
-				(parse_url($url, PHP_URL_PATH) == '')) {
+			(parse_url($url, PHP_URL_PATH) == '')) {
 				Logger::debug('Found redirect. Mark old entry as failure and redirect to the basepath.', ['old' => $url, 'new' => $valid_url]);
 				$parts = (array)parse_url($valid_url);
 				unset($parts['path']);
@@ -606,7 +606,7 @@ class GServer
 		if ((parse_url($url, PHP_URL_HOST) == parse_url($valid_url, PHP_URL_HOST)) &&
 			(parse_url($url, PHP_URL_PATH) == parse_url($valid_url, PHP_URL_PATH)) &&
 			(parse_url($url, PHP_URL_SCHEME) != parse_url($valid_url, PHP_URL_SCHEME))) {
-			$url = $valid_url;
+				$url = $valid_url;
 		}
 
 		$in_webroot = empty(parse_url($url, PHP_URL_PATH));
@@ -735,6 +735,10 @@ class GServer
 			if (in_array($serverdata['detection-method'], array_merge(self::DETECT_UNSPECIFIC, [self::DETECT_FRIENDICA, self::DETECT_CONFIG_JSON]))) {
 				$serverdata = self::fetchStatistics($url, $serverdata);
 			}
+		}
+
+		if (in_array($serverdata['platform'] ?? '', ['friendica', 'hubzilla', 'streams', 'osada', 'mistpark', 'roadhouse', 'zap'])) {
+			$serverdata = self::getZotData($url, $serverdata);
 		}
 
 		// When we hadn't been able to detect the network type, we use the hint from the parameter
@@ -1623,6 +1627,77 @@ class GServer
 		return $data ?? '';
 	}
 
+	private static function getZotData(string $url, array $serverdata): array
+	{
+		$curlResult = DI::httpClient()->get($url, 'application/x-zot+json');
+		if (!$curlResult->isSuccess()) {
+			return $serverdata;
+		}
+		$json = $curlResult->getBodyString();
+		$data = json_decode($json, true);
+		if (empty($data)) {
+			return $serverdata;
+		}
+
+		if (!empty($data['site'])) {
+			$serverdata = self::getFromZotData($data['site'], $serverdata);
+		} else {
+			$serverdata = self::getFromZotData($data, $serverdata);
+		}
+		return $serverdata;
+	}
+
+	private static function getFromZotData(array $data, array $serverdata): array
+	{
+		if (!empty($data['version'])) {
+			$serverdata['version'] = $data['version'];
+		}
+
+		if (!empty($data['openWebAuth'])) {
+			$serverdata['openwebauth'] = $data['openWebAuth'];
+		}
+
+		if (!empty($data['authRedirect'])) {
+			$serverdata['authredirect'] = $data['authRedirect'];
+		}
+
+		if (!empty($data['sitename'])) {
+			$serverdata['site_name'] = $data['sitename'];
+		}
+
+		if (!empty($data['about'])) {
+			$serverdata['info'] = $data['about'];
+		}
+
+		if (empty($serverdata['info']) && !empty($data['location'])) {
+			$serverdata['info'] = $data['location'];
+		}
+
+		if (!empty($data['project']) && in_array($data['project'], ['friendica', 'hubzilla', 'streams', 'osada', 'mistpark', 'roadhouse', 'zap'])) {
+			$serverdata['platform'] = $data['project'];
+		}
+
+		if (!empty($data['accounts'])) {
+			$serverdata['registered-users'] = $data['accounts'];
+		}
+
+		if (!empty($data['register_policy'])) {
+			switch ($data['register_policy']) {
+				case 'open':
+					$serverdata['register_policy'] = Register::OPEN;
+					break;
+				case 'closed':
+					$serverdata['register_policy'] = Register::CLOSED;
+					break;
+				case 'approve':
+					$serverdata['register_policy'] = Register::APPROVE;
+					break;
+			}
+		}
+
+		return $serverdata;
+	}
+
 	/**
 	 * Checks if the server contains a valid host meta file
 	 *
@@ -2105,7 +2180,7 @@ class GServer
 			($curlResult->getBodyString() != '') && (strlen($curlResult->getBodyString()) < 30)) {
 
 			// Remove junk that some GNU Social servers return
-			$serverdata['version'] = str_replace(chr(239).chr(187).chr(191), '', $curlResult->getBodyString());
+			$serverdata['version'] = str_replace(chr(239) . chr(187) . chr(191), '', $curlResult->getBodyString());
 			$serverdata['version'] = str_replace(["\r", "\n", "\t"], '', $serverdata['version']);
 			$serverdata['version'] = trim($serverdata['version'], '"');
 
@@ -2192,7 +2267,7 @@ class GServer
 				break;
 			default:
 				Logger::info('Register policy is invalid', ['policy' => $register_policy, 'server' => $url]);
- 				$serverdata['register_policy'] = Register::CLOSED;
+				$serverdata['register_policy'] = Register::CLOSED;
 				break;
 		}
 
@@ -2490,17 +2565,17 @@ class GServer
 			return;
 		}
 
-		$gserver = DBA::selectFirst('gserver', ['openwebauth'], ['id' => $data['gsid']]);
+		$gserver = DBA::selectFirst('gserver', ['url', 'openwebauth'], ['id' => $data['gsid']]);
 		if (!DBA::isResult($gserver)) {
 			return;
 		}
 
-		if ($data['openwebauth'] == $gserver['openwebauth']) {
-			return;
+		$serverdata = self::getZotData($gserver['url'], []);
+		if (empty($serverdata)) {
+			$serverdata = ['openwebauth' => $data['openwebauth']];
 		}
 
-		Logger::debug('Set Open Web Auth path', ['baseurl' => $data['baseurl'], 'openwebauth' => $data['openwebauth']]);
-		self::update(['openwebauth' => $data['openwebauth']], ['id' => $data['gsid']]);
+		self::update($serverdata, ['id' => $data['gsid']]);
 	}
 
 	/**

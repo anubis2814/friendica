@@ -29,6 +29,7 @@ use Friendica\Core\Hook;
 use Friendica\Core\L10n;
 use Friendica\Core\Logger;
 use Friendica\Core\Renderer;
+use Friendica\Core\Session\Capability\IHandleUserSessions;
 use Friendica\Core\Worker;
 use Friendica\Database\DBA;
 use Friendica\DI;
@@ -51,11 +52,16 @@ class Register extends BaseModule
 	/** @var Tos */
 	protected $tos;
 
-	public function __construct(L10n $l10n, App\BaseURL $baseUrl, App\Arguments $args, LoggerInterface $logger, Profiler $profiler, Response $response, IManageConfigValues $config, array $server, array $parameters = [])
+	/** @var IHandleUserSessions */
+	private $session;
+
+	public function __construct(IHandleUserSessions $session, L10n $l10n, App\BaseURL $baseUrl, App\Arguments $args, LoggerInterface $logger, Profiler $profiler, Response $response, IManageConfigValues $config, array $server, array $parameters = [])
 	{
 		parent::__construct($l10n, $baseUrl, $args, $logger, $profiler, $response, $server, $parameters);
 
 		$this->tos = new Tos($l10n, $baseUrl, $args, $logger, $profiler, $response, $config, $server, $parameters);
+
+		$this->session = $session;
 	}
 
 	/**
@@ -242,7 +248,7 @@ class Register extends BaseModule
 
 			case self::CLOSED:
 			default:
-				if (empty($_SESSION['authenticated']) && empty($_SESSION['administrator'])) {
+				if (!$this->session->isSiteAdmin()) {
 					DI::sysmsg()->addNotice(DI::l10n()->t('Permission denied.'));
 					return;
 				}

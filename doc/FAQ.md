@@ -103,6 +103,9 @@ When a certain language is forced, the language remains until session is closed.
 <a name="contacts"></a>
 ### How do blocked, ignored, archived and hidden contacts behave?
 
+These are various categories of contacts that are restricted in some way.
+Many of these types are related to [Safety](help/Safety).
+
 ##### Blocked
 
 Direct communication will be blocked.
@@ -126,7 +129,7 @@ However, unlike blocking, existing posts this person made before being archived 
 
 ##### Hidden
 
-Contact not be displayed in your public friend list.
+The contact not be displayed in your public friend list.
 However, a hidden contact will appear normally in conversations and this may expose their hidden status to anybody who can see the conversation.
 
 <a name="removed"></a>
