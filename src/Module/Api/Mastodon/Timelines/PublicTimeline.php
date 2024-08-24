@@ -21,15 +21,22 @@
 
 namespace Friendica\Module\Api\Mastodon\Timelines;
 
+use Friendica\App;
+use Friendica\Core\Config\Capability\IManageConfigValues;
+use Friendica\Core\L10n;
 use Friendica\Core\Logger;
 use Friendica\Core\Protocol;
 use Friendica\Database\DBA;
 use Friendica\DI;
 use Friendica\Model\Item;
 use Friendica\Model\Post;
+use Friendica\Module\Api\ApiResponse;
 use Friendica\Module\BaseApi;
+use Friendica\Module\Conversation\Community;
 use Friendica\Network\HTTPException;
 use Friendica\Object\Api\Mastodon\TimelineOrderByTypes;
+use Friendica\Util\Profiler;
+use Psr\Log\LoggerInterface;
 
 /**
  * @see https://docs.joinmastodon.org/methods/timelines/
@@ -37,12 +44,20 @@ use Friendica\Object\Api\Mastodon\TimelineOrderByTypes;
 class PublicTimeline extends BaseApi
 {
 	/**
+	 * @var IManageConfigValues
+	 */
+	private $config;
+
+	public function __construct(IManageConfigValues $config, \Friendica\Factory\Api\Mastodon\Error $errorFactory, App $app, L10n $l10n, App\BaseURL $baseUrl, App\Arguments $args, LoggerInterface $logger, Profiler $profiler, ApiResponse $response, array $server, array $parameters = [])
+	{
+		parent::__construct($errorFactory, $app, $l10n, $baseUrl, $args, $logger, $profiler, $response, $server, $parameters);
+		$this->config = $config;
+	}
+	/**
 	 * @throws HTTPException\InternalServerErrorException
 	 */
 	protected function rawContent(array $request = [])
 	{
-		$uid = self::getCurrentUserID();
-
 		$request = $this->getRequest([
 			'max_id'          => null,  // Return results older than id
 			'since_id'        => null,  // Return results newer than id
@@ -55,6 +70,16 @@ class PublicTimeline extends BaseApi
 			'exclude_replies' => false, // Don't show comments
 			'friendica_order' => TimelineOrderByTypes::ID, // Sort order options (defaults to ID)
 		], $request);
+
+		if ($this->config->get('system', 'community_page_style') == Community::DISABLED) {
+			$this->jsonExit([]);
+		}
+
+		if ($this->authRequired($request)) {
+			$this->checkAllowedScope(BaseApi::SCOPE_READ);
+		}
+
+		$uid = self::getCurrentUserID();
 
 		$condition = [
 			'gravity' => [Item::GRAVITY_PARENT, Item::GRAVITY_COMMENT], 'private' => Item::PUBLIC,
@@ -112,5 +137,22 @@ class PublicTimeline extends BaseApi
 
 		self::setLinkHeader($request['friendica_order'] != TimelineOrderByTypes::ID);
 		$this->jsonExit($statuses);
+	}
+
+	private function authRequired(array $request): bool
+	{
+		if ($this->config->get('system', 'block_public') || $this->config->get('system', 'community_page_style') == Community::DISABLED_VISITOR) {
+			return true;
+		}
+
+		if ($request['local'] && $this->config->get('system', 'community_page_style') == Community::GLOBAL) {
+			return true;
+		}
+
+		if ($request['remote'] && $this->config->get('system', 'community_page_style') == Community::LOCAL) {
+			return true;
+		}
+
+		return false;
 	}
 }

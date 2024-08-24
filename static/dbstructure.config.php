@@ -56,7 +56,7 @@ use Friendica\Database\DBA;
 
 // This file is required several times during the test in DbaDefinition which justifies this condition
 if (!defined('DB_UPDATE_VERSION')) {
-	define('DB_UPDATE_VERSION', 1565);
+	define('DB_UPDATE_VERSION', 1572);
 }
 
 return [
@@ -67,7 +67,7 @@ return [
 			"id" => ["type" => "int unsigned", "not null" => "1", "extra" => "auto_increment", "primary" => "1", "comment" => "sequential ID"],
 			"url" => ["type" => "varbinary(383)", "not null" => "1", "default" => "", "comment" => ""],
 			"nurl" => ["type" => "varbinary(383)", "not null" => "1", "default" => "", "comment" => ""],
-			"version" => ["type" => "varchar(255)", "not null" => "1", "default" => "", "comment" => ""],
+			"version" => ["type" => "varchar(255)", "not null" => "1", "default" => "", "comment" => "The version of this server software."],
 			"site_name" => ["type" => "varchar(255)", "not null" => "1", "default" => "", "comment" => ""],
 			"info" => ["type" => "text", "comment" => ""],
 			"register_policy" => ["type" => "tinyint", "not null" => "1", "default" => "0", "comment" => ""],
@@ -84,7 +84,9 @@ return [
 			"noscrape" => ["type" => "varbinary(383)", "not null" => "1", "default" => "", "comment" => ""],
 			"network" => ["type" => "char(4)", "not null" => "1", "default" => "", "comment" => ""],
 			"protocol" => ["type" => "tinyint unsigned", "comment" => "The protocol of the server"],
-			"platform" => ["type" => "varchar(255)", "not null" => "1", "default" => "", "comment" => ""],
+			"platform" => ["type" => "varchar(255)", "not null" => "1", "default" => "", "comment" => "The canonical name of this server software."],
+			"repository" => ["type" => "varbinary(383)", "comment" => "The url of the source code repository of this server software."],
+			"homepage" => ["type" => "varbinary(383)", "comment" => "The url of the homepage of this server software."],
 			"relay-subscribe" => ["type" => "boolean", "not null" => "1", "default" => "0", "comment" => "Has the server subscribed to the relay system"],
 			"relay-scope" => ["type" => "varchar(10)", "not null" => "1", "default" => "", "comment" => "The scope of messages that the server wants to get"],
 			"detection-method" => ["type" => "tinyint unsigned", "comment" => "Method that had been used to detect that server"],
@@ -430,6 +432,7 @@ return [
 			"manually-approve" => ["type" => "boolean", "comment" => ""],
 			"discoverable" => ["type" => "boolean", "comment" => "Mastodon extension: true if profile is published in their directory"],
 			"suspended" => ["type" => "boolean", "comment" => "Mastodon extension: true if profile is suspended"],
+			"posting-restricted" => ["type" => "boolean", "comment" => "lemmy:postingRestrictedToMods"],
 			"nick" => ["type" => "varchar(255)", "not null" => "1", "default" => "", "comment" => ""],
 			"name" => ["type" => "varchar(255)", "comment" => ""],
 			"about" => ["type" => "text", "comment" => ""],
@@ -865,6 +868,7 @@ return [
 			"activity-id" => ["type" => "varbinary(383)", "comment" => "id of the incoming activity"],
 			"object-id" => ["type" => "varbinary(383)", "comment" => ""],
 			"in-reply-to-id" => ["type" => "varbinary(383)", "comment" => ""],
+			"context" => ["type" => "varbinary(383)", "comment" => ""],
 			"conversation" => ["type" => "varbinary(383)", "comment" => ""],
 			"type" => ["type" => "varchar(64)", "comment" => "Type of the activity"],
 			"object-type" => ["type" => "varchar(64)", "comment" => "Type of the object activity"],
@@ -875,6 +879,7 @@ return [
 			"push" => ["type" => "boolean", "comment" => "Is the entry pushed or have pulled it?"],
 			"trust" => ["type" => "boolean", "comment" => "Do we trust this entry?"],
 			"wid" => ["type" => "int unsigned", "foreign" => ["workerqueue" => "id"], "comment" => "Workerqueue id"],
+			"retrial" => ["type" => "tinyint unsigned", "default" => "0", "comment" => "Retrial counter"],
 		],
 		"indexes" => [
 			"PRIMARY" => ["id"],
@@ -1219,6 +1224,7 @@ return [
 			"parent-uri-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table that contains the parent uri"],
 			"thr-parent-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table that contains the thread parent uri"],
 			"external-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the external uri"],
+			"replies-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the endpoint for the replies collection"],
 			"created" => ["type" => "datetime", "not null" => "1", "default" => DBA::NULL_DATETIME, "comment" => "Creation timestamp."],
 			"edited" => ["type" => "datetime", "not null" => "1", "default" => DBA::NULL_DATETIME, "comment" => "Date of last edit (default is created)"],
 			"received" => ["type" => "datetime", "not null" => "1", "default" => DBA::NULL_DATETIME, "comment" => "datetime"],
@@ -1239,6 +1245,7 @@ return [
 			"parent-uri-id" => ["parent-uri-id"],
 			"thr-parent-id" => ["thr-parent-id"],
 			"external-id" => ["external-id"],
+			"replies-id" => ["replies-id"],
 			"owner-id" => ["owner-id"],
 			"author-id" => ["author-id"],
 			"causer-id" => ["causer-id"],
@@ -1550,6 +1557,7 @@ return [
 		"comment" => "Thread related data",
 		"fields" => [
 			"uri-id" => ["type" => "int unsigned", "not null" => "1", "primary" => "1", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the item uri"],
+			"context-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the endpoint for the context collection"],
 			"conversation-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the conversation uri"],
 			"owner-id" => ["type" => "int unsigned", "not null" => "1", "default" => "0", "foreign" => ["contact" => "id", "on delete" => "restrict"], "comment" => "Item owner"],
 			"author-id" => ["type" => "int unsigned", "not null" => "1", "default" => "0", "foreign" => ["contact" => "id", "on delete" => "restrict"], "comment" => "Item author"],
@@ -1562,6 +1570,7 @@ return [
 		],
 		"indexes" => [
 			"PRIMARY" => ["uri-id"],
+			"context-id" => ["context-id"],
 			"conversation-id" => ["conversation-id"],
 			"owner-id" => ["owner-id"],
 			"author-id" => ["author-id"],
@@ -1578,6 +1587,7 @@ return [
 			"parent-uri-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table that contains the parent uri"],
 			"thr-parent-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table that contains the thread parent uri"],
 			"external-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the external uri"],
+			"replies-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the endpoint for the replies collection"],
 			"created" => ["type" => "datetime", "not null" => "1", "default" => DBA::NULL_DATETIME, "comment" => "Creation timestamp."],
 			"edited" => ["type" => "datetime", "not null" => "1", "default" => DBA::NULL_DATETIME, "comment" => "Date of last edit (default is created)"],
 			"received" => ["type" => "datetime", "not null" => "1", "default" => DBA::NULL_DATETIME, "comment" => "datetime"],
@@ -1612,6 +1622,7 @@ return [
 			"parent-uri-id" => ["parent-uri-id"],
 			"thr-parent-id" => ["thr-parent-id"],
 			"external-id" => ["external-id"],
+			"replies-id" => ["replies-id"],
 			"owner-id" => ["owner-id"],
 			"author-id" => ["author-id"],
 			"causer-id" => ["causer-id"],
@@ -1634,6 +1645,7 @@ return [
 		"comment" => "Thread related data per user",
 		"fields" => [
 			"uri-id" => ["type" => "int unsigned", "not null" => "1", "primary" => "1", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the item uri"],
+			"context-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the endpoint for the context collection"],
 			"conversation-id" => ["type" => "int unsigned", "foreign" => ["item-uri" => "id"], "comment" => "Id of the item-uri table entry that contains the conversation uri"],
 			"owner-id" => ["type" => "int unsigned", "not null" => "1", "default" => "0", "foreign" => ["contact" => "id", "on delete" => "restrict"], "comment" => "Item owner"],
 			"author-id" => ["type" => "int unsigned", "not null" => "1", "default" => "0", "foreign" => ["contact" => "id", "on delete" => "restrict"], "comment" => "Item author"],
@@ -1661,6 +1673,7 @@ return [
 		"indexes" => [
 			"PRIMARY" => ["uid", "uri-id"],
 			"uri-id" => ["uri-id"],
+			"context-id" => ["context-id"],
 			"conversation-id" => ["conversation-id"],
 			"owner-id" => ["owner-id"],
 			"author-id" => ["author-id"],

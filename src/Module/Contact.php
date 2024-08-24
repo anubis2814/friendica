@@ -58,7 +58,13 @@ class Contact extends BaseModule
 			return;
 		}
 
-		$redirectUrl = $_POST['redirect_url'] ?? 'contact';
+		$redirectUrl = $_POST['command'] ?? '';
+		if (substr($redirectUrl, 0, 7) != 'contact') {
+			$redirectUrl = 'contact';
+		}
+		if (!empty($_POST['parameter'])) {
+			$redirectUrl .= '?' . $_POST['parameter'];
+		}
 
 		self::checkFormSecurityTokenRedirectOnError($redirectUrl, 'contact_batch_actions');
 
@@ -253,7 +259,7 @@ class Contact extends BaseModule
 				$sql_extra = " AND `archive` AND NOT `blocked` AND NOT `pending`";
 				break;
 			case 'pending':
-				$sql_extra = " AND `pending` AND NOT `archive` AND NOT `failed` AND ((`rel` = ?)
+				$sql_extra = " AND `pending` AND NOT `archive` AND ((`rel` = ?)
 					OR `id` IN (SELECT `contact-id` FROM `intro` WHERE `intro`.`uid` = ? AND NOT `ignore`))";
 				$sql_values[] = Model\Contact::SHARING;
 				$sql_values[] = DI::userSession()->getLocalUserId();
@@ -459,6 +465,7 @@ class Contact extends BaseModule
 			'$finding'    => $searching ? DI::l10n()->t('Results for: %s', $search) : '',
 			'$submit'     => DI::l10n()->t('Find'),
 			'$cmd'        => DI::args()->getCommand(),
+			'$parameter'  => http_build_query($request),
 			'$contacts'   => $contacts,
 			'$form_security_token'  => BaseModule::getFormSecurityToken('contact_batch_actions'),
 			'multiselect' => 1,

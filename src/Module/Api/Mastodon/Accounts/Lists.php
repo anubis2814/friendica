@@ -51,9 +51,9 @@ class Lists extends BaseApi
 
 		$lists = [];
 
-		$cdata = Contact::getPublicAndUserContactID($id, $uid);
-		if (!empty($cdata['user'])) {
-			$circles = DBA::select('group_member', ['gid'], ['contact-id' => $cdata['user']]);
+		$ucid = Contact::getUserContactId($id, $uid);
+		if ($ucid) {
+			$circles = DBA::select('group_member', ['gid'], ['contact-id' => $ucid]);
 			while ($circle = DBA::fetch($circles)) {
 				$lists[] = DI::mstdnList()->createFromCircleId($circle['gid']);
 			}

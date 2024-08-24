@@ -330,6 +330,11 @@ class Account extends BaseSettings
 			}
 
 			User::setCommunityUserSettings(DI::userSession()->getLocalUserId());
+
+			if ($account_type == User::ACCOUNT_TYPE_RELAY) {
+				Profile::setResponsibleRelayContact(DI::userSession()->getLocalUserId());
+			}
+
 			DI::baseUrl()->redirect($redirectUrl);
 		}
 
@@ -425,7 +430,7 @@ class Account extends BaseSettings
 			$user['account-type'] = User::ACCOUNT_TYPE_COMMUNITY;
 		}
 
-		if (DI::config()->get('system', 'allow_relay_channels')) {
+		if (!empty($user['parent-uid']) && DI::config()->get('system', 'allow_relay_channels')) {
 			$account_relay = [
 				'account-type',
 				DI::l10n()->t('Channel Relay'),

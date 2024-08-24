@@ -55,9 +55,9 @@ class Show extends ContactEndpoint
 		$following = false;
 
 		if ($source_cid == Contact::getPublicIdByUserId($uid)) {
-			$cdata = Contact::getPublicAndUserContactID($target_cid, $uid);
-			if (!empty($cdata['user'])) {
-				$usercontact = Contact::getById($cdata['user'], ['rel']);
+			$ucid = Contact::getUserContactId($target_cid, $uid);
+			if ($ucid) {
+				$usercontact = Contact::getById($ucid, ['rel']);
 				switch ($usercontact['rel'] ?? Contact::NOTHING) {
 					case Contact::FOLLOWER:
 						$follower  = true;

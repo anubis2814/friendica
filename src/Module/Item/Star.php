@@ -34,7 +34,7 @@ use Friendica\Network\HTTPException;
  */
 class Star extends BaseModule
 {
-	protected function rawContent(array $request = [])
+	protected function post(array $request = [])
 	{
 		$l10n = DI::l10n();
 

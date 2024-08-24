@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# SPDX-FileCopyrightText: 2010 - 2024 the Friendica project
+#
+# SPDX-License-Identifier: CC0-1.0
+
 dir=$(cd "${0%[/\\]*}" > /dev/null; pwd)
 
 if [[ -d /proc/cygdrive && $(which php) == $(readlink -n /proc/cygdrive)/* ]]; then

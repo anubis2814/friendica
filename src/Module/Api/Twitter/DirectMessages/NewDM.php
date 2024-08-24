@@ -54,7 +54,7 @@ class NewDM extends BaseApi
 		$this->directMessage = $directMessage;
 	}
 
-	protected function rawContent(array $request = [])
+	protected function post(array $request = [])
 	{
 		$this->checkAllowedScope(BaseApi::SCOPE_WRITE);
 		$uid = BaseApi::getCurrentUserID();
@@ -81,9 +81,9 @@ class NewDM extends BaseApi
 			}
 		}
 
-		$cdata = Contact::getPublicAndUserContactID($cid, $uid);
+		$ucid = Contact::getUserContactId($cid, $uid);
 
-		$id = Mail::send($uid, $cdata['user'], $request['text'], $sub, $replyto);
+		$id = Mail::send($uid, $ucid, $request['text'], $sub, $replyto);
 
 		if ($id > -1) {
 			$ret = $this->directMessage->createFromMailId($id, $uid, $this->getRequestValue($request, 'getText', ''));

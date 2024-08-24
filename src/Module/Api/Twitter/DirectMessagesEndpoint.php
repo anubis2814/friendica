@@ -88,9 +88,9 @@ abstract class DirectMessagesEndpoint extends BaseApi
 
 		$cid = BaseApi::getContactIDForSearchterm($this->getRequestValue($request, 'screen_name', ''), $this->getRequestValue($request, 'profileurl', ''), $this->getRequestValue($request, 'user_id', 0), 0);
 		if (!empty($cid)) {
-			$cdata = Contact::getPublicAndUserContactID($cid, $uid);
-			if (!empty($cdata['user'])) {
-				$condition = DBA::mergeConditions($condition, ["`contact-id` = ?", $cdata['user']]);
+			$ucid = Contact::getUserContactId($cid, $uid);
+			if ($ucid) {
+				$condition = DBA::mergeConditions($condition, ["`contact-id` = ?", $ucid]);
 			}
 		}
 

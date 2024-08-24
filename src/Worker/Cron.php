@@ -28,7 +28,6 @@ use Friendica\Core\Worker;
 use Friendica\Database\DBA;
 use Friendica\DI;
 use Friendica\Model\Tag;
-use Friendica\Protocol\ActivityPub\Queue;
 use Friendica\Protocol\Relay;
 use Friendica\Util\DateTimeFormat;
 
@@ -92,11 +91,8 @@ class Cron
 			Tag::setLocalTrendingHashtags(24, 20);
 			Tag::setGlobalTrendingHashtags(24, 20);
 
-			// Remove old pending posts from the queue
-			Queue::clear();
-
 			// Process all unprocessed entries
-			Queue::processAll();
+			Worker::add(Worker::PRIORITY_LOW, 'ProcessUnprocessedEntries');
 
 			// Search for new contacts in the directory
 			if (DI::config()->get('system', 'synchronize_directory')) {

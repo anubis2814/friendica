@@ -43,9 +43,9 @@ class Block extends BaseApi
 
 		Contact\User::setBlocked($this->parameters['id'], $uid, true);
 
-		$cdata = Contact::getPublicAndUserContactID($this->parameters['id'], $uid);
-		if (!empty($cdata['user'])) {
-			$contact = Contact::getById($cdata['user']);
+		$ucid = Contact::getUserContactId($this->parameters['id'], $uid);
+		if ($ucid) {
+			$contact = Contact::getById($ucid);
 			if (!empty($contact)) {
 				// Mastodon-expected behavior: relationship is severed on block
 				Contact::terminateFriendship($contact);

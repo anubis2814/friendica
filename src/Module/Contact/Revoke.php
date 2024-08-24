@@ -30,6 +30,7 @@ use Friendica\Core\Renderer;
 use Friendica\Database\Database;
 use Friendica\DI;
 use Friendica\Model;
+use Friendica\Model\Contact as ModelContact;
 use Friendica\Module\Contact;
 use Friendica\Module\Response;
 use Friendica\Module\Security\Login;
@@ -58,16 +59,12 @@ class Revoke extends BaseModule
 			return;
 		}
 
-		$data = Model\Contact::getPublicAndUserContactID($this->parameters['id'], DI::userSession()->getLocalUserId());
-		if (!$this->dba->isResult($data)) {
-			throw new HTTPException\NotFoundException($this->t('Unknown contact.'));
-		}
-
-		if (empty($data['user'])) {
+		$ucid = Model\Contact::getUserContactId($this->parameters['id'], DI::userSession()->getLocalUserId());
+		if (!$ucid) {
 			throw new HTTPException\ForbiddenException();
 		}
 
-		$this->contact = Model\Contact::getById($data['user']);
+		$this->contact = Model\Contact::getById($ucid);
 
 		if ($this->contact['deleted']) {
 			throw new HTTPException\NotFoundException($this->t('Contact is deleted.'));
@@ -90,7 +87,7 @@ class Revoke extends BaseModule
 
 		DI::sysmsg()->addNotice($this->t('Follow was successfully revoked.'));
 
-		$this->baseUrl->redirect('contact/' . $this->parameters['id']);
+		$this->baseUrl->redirect('contact/' . ModelContact::getPublicContactId($this->parameters['id'], DI::userSession()->getLocalUserId()));
 	}
 
 	protected function content(array $request = []): string

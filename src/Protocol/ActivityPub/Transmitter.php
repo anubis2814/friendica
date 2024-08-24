@@ -928,9 +928,9 @@ class Transmitter
 	 *
 	 * @param array $item
 	 * @param boolean $blindcopy
-	 * @return void
+	 * @return array
 	 */
-	public static function getReceiversForUriId(int $uri_id, bool $blindcopy)
+	public static function getReceiversForUriId(int $uri_id, bool $blindcopy): array
 	{
 		$tags = Tag::getByURIId($uri_id, [Tag::TO, Tag::CC, Tag::BTO, Tag::BCC, Tag::AUDIENCE]);
 		if (empty($tags)) {
@@ -1028,14 +1028,6 @@ class Transmitter
 	{
 		$inboxes = [];
 
-		$isGroup = false;
-		if (!empty($item['uid'])) {
-			$profile = User::getOwnerDataById($item['uid']);
-			if (!empty($profile)) {
-				$isGroup = $profile['account-type'] == User::ACCOUNT_TYPE_COMMUNITY;
-			}
-		}
-
 		if ($all_ap) {
 			// Will be activated in a later step
 			$networks = Protocol::FEDERATED;
@@ -1061,10 +1053,6 @@ class Transmitter
 		$contacts = DBA::select('contact', ['id', 'url', 'network', 'protocol', 'gsid'], $condition);
 		while ($contact = DBA::fetch($contacts)) {
 			if (!self::isAPContact($contact, $networks)) {
-				continue;
-			}
-
-			if ($isGroup && ($contact['network'] == Protocol::DFRN)) {
 				continue;
 			}
 
@@ -1865,8 +1853,12 @@ class Transmitter
 		}
 		$data['sensitive'] = (bool)$item['sensitive'];
 
+		if (!empty($item['context']) && ($item['context'] != './')) {
+			$data['context'] = $item['context'];
+		}
+
 		if (!empty($item['conversation']) && ($item['conversation'] != './')) {
-			$data['conversation'] = $data['context'] = $item['conversation'];
+			$data['conversation'] = $item['conversation'];
 		}
 
 		if (!empty($title)) {

@@ -45,13 +45,13 @@ class VerifyCredentials extends BaseApi
 			DI::mstdnError()->InternalError();
 		}
 
-		$cdata = Contact::getPublicAndUserContactID($self['id'], $uid);
-		if (empty($cdata)) {
+		$ucid = Contact::getUserContactId($self['id'], $uid);
+		if (!$ucid) {
 			DI::mstdnError()->InternalError();
 		}
 
 		// @todo Support the source property,
-		$account = DI::mstdnAccount()->createFromContactId($cdata['user'], $uid);
+		$account = DI::mstdnAccount()->createFromContactId($ucid, $uid);
 		$this->response->addJsonContent($account->toArray());
 	}
 }

@@ -25,6 +25,7 @@ use Friendica\Core\Hook;
 use Friendica\Core\Logger;
 use Friendica\Content\Text\BBCode;
 use Friendica\Content\Text\HTML;
+use Friendica\Core\Protocol;
 use Friendica\Model\Item;
 use Friendica\Util\Strings;
 use \IMAP\Connection;
@@ -59,6 +60,9 @@ class Email
 			Logger::notice('IMAP Alerts occurred: ', ['alerts' => $alerts]);
 		}
 
+		if (empty($errors) && empty($alerts)) {
+			Item::incrementInbound(Protocol::MAIL);
+		}
 		return $mbox;
 	}
 
@@ -79,6 +83,7 @@ class Email
 			$search1 = [];
 		} else {
 			Logger::debug("Found mails from ".$email_addr);
+			Item::incrementInbound(Protocol::MAIL);
 		}
 
 		$search2 = @imap_search($mbox, 'UNDELETED TO "' . $email_addr . '"', SE_UID);
@@ -86,6 +91,7 @@ class Email
 			$search2 = [];
 		} else {
 			Logger::debug("Found mails to ".$email_addr);
+			Item::incrementInbound(Protocol::MAIL);
 		}
 
 		$search3 = @imap_search($mbox, 'UNDELETED CC "' . $email_addr . '"', SE_UID);
@@ -93,6 +99,7 @@ class Email
 			$search3 = [];
 		} else {
 			Logger::debug("Found mails cc ".$email_addr);
+			Item::incrementInbound(Protocol::MAIL);
 		}
 
 		$res = array_unique(array_merge($search1, $search2, $search3));
@@ -136,13 +143,14 @@ class Email
 	public static function getMessage($mbox, int $uid, string $reply, array $item): array
 	{
 		$ret = $item;
-
 		$struc = (($mbox && $uid) ? @imap_fetchstructure($mbox, $uid, FT_UID) : null);
 
 		if (!$struc) {
 			Logger::notice("IMAP structure couldn't be fetched", ['uid' => $uid]);
 			return $ret;
 		}
+
+		Item::incrementInbound(Protocol::MAIL);
 
 		if (empty($struc->parts)) {
 			$html = trim(self::messageGetPart($mbox, $uid, $struc, 0, 'html'));
@@ -403,7 +411,11 @@ class Email
 		//$message = '<html><body>' . $html . '</body></html>';
 		//$message = html2plain($html);
 		Logger::notice('notifier: email delivery to ' . $addr);
-		return mail($addr, $subject, $body, $headers);
+		$success = mail($addr, $subject, $body, $headers);
+		if ($success) {
+			Item::incrementOutbound(Protocol::MAIL);
+		}
+		return $success;
 	}
 
 	/**

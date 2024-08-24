@@ -47,7 +47,7 @@ $apiRoutes = [
 	'/account' => [
 		'/verify_credentials[.{extension:json|xml|rss|atom}]'      => [Module\Api\Twitter\Account\VerifyCredentials::class,  [R::GET         ]],
 		'/rate_limit_status[.{extension:json|xml|rss|atom}]'       => [Module\Api\Twitter\Account\RateLimitStatus::class,    [R::GET         ]],
-		'/update_profile[.{extension:json|xml|rss|atom}]'          => [Module\Api\Twitter\Account\UpdateProfile ::class,     [        R::POST]],
+		'/update_profile[.{extension:json|xml|rss|atom}]'          => [Module\Api\Twitter\Account\UpdateProfile::class,      [        R::POST]],
 		'/update_profile_image[.{extension:json|xml|rss|atom}]'    => [Module\Api\Twitter\Account\UpdateProfileImage::class, [        R::POST]],
 	],
 
@@ -261,7 +261,7 @@ return [
 			'/lists/{id:\d+}'                    => [Module\Api\Mastodon\Lists::class,                    [R::GET, R::PUT, R::DELETE]],
 			'/lists/{id:\d+}/accounts'           => [Module\Api\Mastodon\Lists\Accounts::class,           [R::GET, R::POST, R::DELETE]],
 			'/markers'                           => [Module\Api\Mastodon\Markers::class,                  [R::GET, R::POST]],
-			'/media/{id:\d+}'                    => [Module\Api\Mastodon\Media::class,                    [R::GET, R::PUT ]],
+			'/media/{id}'                        => [Module\Api\Mastodon\Media::class,                    [R::GET, R::PUT ]],
 			'/mutes'                             => [Module\Api\Mastodon\Mutes::class,                    [R::GET         ]],
 			'/notifications'                     => [Module\Api\Mastodon\Notifications::class,            [R::GET         ]],
 			'/notifications/{id:\d+}'            => [Module\Api\Mastodon\Notifications::class,            [R::GET         ]],
@@ -446,7 +446,7 @@ return [
 	'/filed'                => [Module\Search\Filed::class,          [R::GET]],
 	'/filer[/{id:\d+}]'     => [Module\Filer\SaveTag::class,         [R::GET]],
 	'/filerm/{id:\d+}'      => [Module\Filer\RemoveTag::class,       [R::GET, R::POST]],
-	'/follow_confirm'       => [Module\FollowConfirm::class,         [R::GET, R::POST]],
+	'/follow_confirm'       => [Module\FollowConfirm::class,         [R::POST]],
 	'/followers/{nickname}' => [Module\ActivityPub\Followers::class, [R::GET]],
 	'/following/{nickname}' => [Module\ActivityPub\Following::class, [R::GET]],
 	'/friendica[/{format:json}]' => [Module\Friendica::class,        [R::GET]],
@@ -491,7 +491,8 @@ return [
 	'/logout'             => [Module\Security\Logout::class, [R::GET, R::POST]],
 	'/magic'              => [Module\Magic::class,           [R::GET]],
 	'/manifest'           => [Module\Manifest::class,        [R::GET]],
-	'/friendica.webmanifest'  => [Module\Manifest::class,    [R::GET]],
+	'/manifest.json'      => [Module\Manifest::class,        [R::GET]],
+	'/friendica.webmanifest' => [Module\Manifest::class,     [R::GET]],
 
 	'/media' => [
 		'/attachment/browser'      => [Module\Media\Attachment\Browser::class, [R::GET]],
@@ -525,6 +526,9 @@ return [
 	'/newmember'          => [Module\Welcome::class,         [R::GET]],
 	'/nodeinfo/1.0'       => [Module\NodeInfo110::class,     [R::GET]],
 	'/nodeinfo/2.0'       => [Module\NodeInfo120::class,     [R::GET]],
+	'/nodeinfo/2.0.json'  => [Module\NodeInfo120::class,     [R::GET]],
+	'/nodeinfo/2.1'       => [Module\NodeInfo121::class,     [R::GET]],
+	'/nodeinfo/2.2'       => [Module\NodeInfo122::class,     [R::GET]],
 	'/nocircle'           => [Module\Circle::class,          [R::GET]],
 
 	'/noscrape' => [
@@ -653,6 +657,8 @@ return [
 			'/trusted'      => [Module\Settings\TwoFactor\Trusted::class,     [R::GET, R::POST]],
 		],
 	],
+
+	'/stats' => [Module\Stats::class, [R::GET]],
 
 	'/network' => [
 		'[/{content}]'                => [Module\Conversation\Network::class, [R::GET]],

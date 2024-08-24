@@ -24,8 +24,10 @@ namespace Friendica\Worker;
 use Friendica\Contact\Avatar;
 use Friendica\Core\Logger;
 use Friendica\Core\Protocol;
+use Friendica\Core\Worker;
 use Friendica\Database\DBA;
 use Friendica\Database\DBStructure;
+use Friendica\DI;
 use Friendica\Model\Contact;
 use Friendica\Model\Photo;
 use Friendica\Util\DateTimeFormat;
@@ -37,24 +39,53 @@ class RemoveUnusedContacts
 {
 	public static function execute()
 	{
-		$condition = ["`id` != ? AND `uid` = ? AND NOT `self` AND NOT `nurl` IN (SELECT `nurl` FROM `contact` WHERE `uid` != ?)
-			AND (NOT `network` IN (?, ?, ?, ?, ?, ?) OR (`archive` AND `success_update` < ?))
-			AND NOT `id` IN (SELECT `author-id` FROM `post-user` WHERE `author-id` = `contact`.`id`)
-			AND NOT `id` IN (SELECT `owner-id` FROM `post-user` WHERE `owner-id` = `contact`.`id`)
-			AND NOT `id` IN (SELECT `causer-id` FROM `post-user` WHERE `causer-id` IS NOT NULL AND `causer-id` = `contact`.`id`)
-			AND NOT `id` IN (SELECT `cid` FROM `post-tag` WHERE `cid` = `contact`.`id`)
-			AND NOT `id` IN (SELECT `contact-id` FROM `post-user` WHERE `contact-id` = `contact`.`id`)
-			AND NOT `id` IN (SELECT `cid` FROM `user-contact` WHERE `cid` = `contact`.`id`)
-			AND NOT `id` IN (SELECT `cid` FROM `event` WHERE `cid` = `contact`.`id`)
-			AND NOT `id` IN (SELECT `contact-id` FROM `group_member` WHERE `contact-id` = `contact`.`id`)
-			AND `created` < ?",
-			0, 0, 0, Protocol::DFRN, Protocol::DIASPORA, Protocol::OSTATUS, Protocol::FEED, Protocol::MAIL, Protocol::ACTIVITYPUB, DateTimeFormat::utc('now - 365 days'), DateTimeFormat::utc('now - 30 days')];
+		$loop = 0;
+		while (self::removeContacts(++$loop)) {
+			Logger::info('In removal', ['loop' => $loop]);
+		}
 
-		$total = DBA::count('contact', $condition);
-		Logger::notice('Starting removal', ['total' => $total]);
+		Logger::notice('Remove apcontact entries with no related contact');
+		DBA::delete('apcontact', ["`uri-id` NOT IN (SELECT `uri-id` FROM `contact`) AND `updated` < ?", DateTimeFormat::utc('now - 30 days')]);
+		Logger::notice('Removed apcontact entries with no related contact', ['count' => DBA::affectedRows()]);
+
+		Logger::notice('Remove diaspora-contact entries with no related contact');
+		DBA::delete('diaspora-contact', ["`uri-id` NOT IN (SELECT `uri-id` FROM `contact`) AND `updated` < ?", DateTimeFormat::utc('now - 30 days')]);
+		Logger::notice('Removed diaspora-contact entries with no related contact', ['count' => DBA::affectedRows()]);
+	}
+
+	public static function removeContacts(int $loop): bool
+	{
+		Logger::notice('Starting removal', ['loop' => $loop]);
+
+		$condition = [
+			"`id` != ? AND `uid` = ? AND NOT `self` AND NOT `uri-id` IN (SELECT `uri-id` FROM `contact` WHERE `uid` != ?)
+			AND NOT EXISTS(SELECT `author-id` FROM `post-user` WHERE `author-id` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `owner-id` FROM `post-user` WHERE `owner-id` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `causer-id` FROM `post-user` WHERE `causer-id` IS NOT NULL AND `causer-id` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `cid` FROM `post-tag` WHERE `cid` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `contact-id` FROM `post-user` WHERE `contact-id` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `cid` FROM `user-contact` WHERE `cid` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `cid` FROM `event` WHERE `cid` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `cid` FROM `group` WHERE `cid` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `author-id` FROM `mail` WHERE `author-id` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `contact-id` FROM `mail` WHERE `contact-id` = `contact`.`id`)
+			AND NOT EXISTS(SELECT `contact-id` FROM `group_member` WHERE `contact-id` = `contact`.`id`)
+			AND `created` < ?", 0, 0, 0, DateTimeFormat::utc('now - 7 days')
+		];
+
+		if (!DI::config()->get('remove_all_unused_contacts')) {
+			$condition2 = [
+				"(NOT `network` IN (?, ?, ?, ?, ?, ?) OR `archive`)",
+				Protocol::DFRN, Protocol::DIASPORA, Protocol::OSTATUS, Protocol::FEED, Protocol::MAIL, Protocol::ACTIVITYPUB
+			];
+			
+			$condition = DBA::mergeConditions($condition2, $condition);
+		}
+
+		$contacts = DBA::select('contact', ['id', 'uid', 'photo', 'thumb', 'micro'], $condition, ['limit' => 1000]);
 		$count = 0;
-		$contacts = DBA::select('contact', ['id', 'uid', 'photo', 'thumb', 'micro'], $condition);
 		while ($contact = DBA::fetch($contacts)) {
+			++$count;
 			Photo::delete(['uid' => $contact['uid'], 'contact-id' => $contact['id']]);
 			Avatar::deleteCache($contact);
 
@@ -83,11 +114,9 @@ class RemoveUnusedContacts
 			DBA::delete('post-thread-user', ['causer-id' => $contact['id']]);
 
 			Contact::deleteById($contact['id']);
-			if ((++$count % 1000) == 0) {
-				Logger::info('In removal', ['count' => $count, 'total' => $total]);
-			}
 		}
 		DBA::close($contacts);
-		Logger::notice('Removal done', ['count' => $count, 'total' => $total]);
+		Logger::notice('Removal done', ['count' => $count]);
+		return ($count == 1000 && Worker::isInMaintenanceWindow());
 	}
 }

@@ -21,6 +21,7 @@
 
 namespace Friendica\Database;
 
+use Friendica\Core\Lock\Exception\LockPersistenceException;
 use Friendica\DI;
 use mysqli;
 use mysqli_result;
@@ -821,6 +822,27 @@ class DBA
 	public static function optimizeTable(string $table): bool
 	{
 		return DI::dba()->optimizeTable($table);
+	}
+
+	/**
+	 * Acquire a lock to prevent a table optimization
+	 *
+	 * @return bool 
+	 * @throws LockPersistenceException 
+	 */
+	public static function acquireOptimizeLock(): bool
+	{
+		return DI::dba()->acquireOptimizeLock();
+	}
+
+	/**
+	 * Release the table optimization lock
+	 * @return bool 
+	 * @throws LockPersistenceException 
+	 */
+	public static function releaseOptimizeLock(): bool
+	{
+		return DI::dba()->releaseOptimizeLock();
 	}
 
 	/**

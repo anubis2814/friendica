@@ -54,7 +54,7 @@ class Destroy extends BaseApi
 		$this->friendicaCircle = $friendicaCircle;
 	}
 
-	protected function rawContent(array $request = [])
+	protected function post(array $request = [])
 	{
 		$this->checkAllowedScope(BaseApi::SCOPE_WRITE);
 		$uid = BaseApi::getCurrentUserID();

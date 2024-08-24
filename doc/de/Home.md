@@ -72,4 +72,5 @@ Hilfe
 **Über**
 
 * [Server Information](friendica)
+* [Nutzungsbedingungen](tos)
 * [Mitwirkende](credits)

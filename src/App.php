@@ -24,6 +24,7 @@ namespace Friendica;
 use Exception;
 use Friendica\App\Arguments;
 use Friendica\App\BaseURL;
+use Friendica\App\Request;
 use Friendica\Capabilities\ICanCreateResponses;
 use Friendica\Content\Nav;
 use Friendica\Core\Config\Factory\Config;
@@ -64,7 +65,7 @@ class App
 {
 	const PLATFORM = 'Friendica';
 	const CODENAME = 'Yellow Archangel';
-	const VERSION  = '2024.06-dev';
+	const VERSION  = '2024.09-dev';
 
 	// Allow themes to control internal parameters
 	// by changing App values in theme.php
@@ -92,6 +93,9 @@ class App
 	private $currentTheme;
 	/** @var string The name of the current mobile theme */
 	private $currentMobileTheme;
+
+	/** @var string */
+	private $requestId;
 
 	/** @var Authentication */
 	private $auth;
@@ -281,8 +285,9 @@ class App
 	 * @param DbaDefinition               $dbaDefinition
 	 * @param ViewDefinition              $viewDefinition
 	 */
-	public function __construct(Authentication $auth, Database $database, IManageConfigValues $config, App\Mode $mode, BaseURL $baseURL, LoggerInterface $logger, Profiler $profiler, L10n $l10n, Arguments $args, IManagePersonalConfigValues $pConfig, IHandleUserSessions $session, DbaDefinition $dbaDefinition, ViewDefinition $viewDefinition)
+	public function __construct(Request $request, Authentication $auth, Database $database, IManageConfigValues $config, App\Mode $mode, BaseURL $baseURL, LoggerInterface $logger, Profiler $profiler, L10n $l10n, Arguments $args, IManagePersonalConfigValues $pConfig, IHandleUserSessions $session, DbaDefinition $dbaDefinition, ViewDefinition $viewDefinition)
 	{
+		$this->requestId      = $request->getRequestId();
 		$this->auth           = $auth;
 		$this->database       = $database;
 		$this->config         = $config;
@@ -683,9 +688,11 @@ class App
 			}
 
 			$this->logger->debug('Request processed sucessfully', ['response' => $response->getStatusCode(), 'address' => $server['REMOTE_ADDR'] ?? '', 'request' => $requeststring, 'referer' => $server['HTTP_REFERER'] ?? '', 'user-agent' => $server['HTTP_USER_AGENT'] ?? '', 'duration' => number_format(microtime(true) - $request_start, 3)]);
+			$this->logSlowCalls(microtime(true) - $request_start, $response->getStatusCode(), $requeststring, $server['HTTP_USER_AGENT'] ?? '');
 			System::echoResponse($response);
 		} catch (HTTPException $e) {
 			$this->logger->debug('Request processed with exception', ['response' => $e->getCode(), 'address' => $server['REMOTE_ADDR'] ?? '', 'request' => $requeststring, 'referer' => $server['HTTP_REFERER'] ?? '', 'user-agent' => $server['HTTP_USER_AGENT'] ?? '', 'duration' => number_format(microtime(true) - $request_start, 3)]);
+			$this->logSlowCalls(microtime(true) - $request_start, $e->getCode(), $requeststring, $server['HTTP_USER_AGENT'] ?? '');
 			$httpException->rawContent($e);
 		}
 		$page->logRuntime($this->config, 'runFrontend');
@@ -706,5 +713,31 @@ class App
 		} else {
 			$this->baseURL->redirect($toUrl);
 		}
+	}
+
+	/**
+	 * Log slow page executions
+	 *
+	 * @param float $duration
+	 * @param integer $code
+	 * @param string $request
+	 * @param string $agent
+	 * @return void
+	 */
+	private function logSlowCalls(float $duration, int $code, string $request, string $agent)
+	{
+		$logfile  = $this->config->get('system', 'page_execution_logfile');
+		$loglimit = $this->config->get('system', 'page_execution_log_limit');
+		if (empty($logfile) || empty($loglimit) || ($duration < $loglimit)) {
+			return;
+		}
+
+		@file_put_contents(
+			$logfile,
+			DateTimeFormat::utcNow() . "\t" . round($duration, 3) . "\t" .
+			$this->requestId . "\t" . $code . "\t" .
+			$request . "\t" . $agent . "\n",
+			FILE_APPEND
+		);
 	}
 }

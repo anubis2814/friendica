@@ -1011,6 +1011,7 @@ class DFRN
 		$content_type = ($public_batch ? 'application/magic-envelope+xml' : 'application/json');
 
 		$postResult = DI::httpClient()->post($dest_url, $envelope, ['Content-Type' => $content_type], 0, HttpClientRequest::DFRN);
+		Item::incrementOutbound(Protocol::DFRN);
 		$xml = $postResult->getBodyString();
 
 		$curl_stat = $postResult->getReturnCode();

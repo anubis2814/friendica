@@ -64,7 +64,7 @@ class Media extends BaseProfile
 
 		$o = self::getTabsHTML('media', $is_owner, $profile['nickname'], $profile['hide-friends']);
 
-		$o .= Contact::getPostsFromUrl($profile['url'], $this->userSession->getLocalUserId(), true);
+		$o .= Contact::getPostsFromUrl($profile['url'], $this->userSession->getLocalUserId(), true, $request['last_created'] ?? '');
 
 		return $o;
 	}

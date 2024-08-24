@@ -56,10 +56,11 @@ class NodeInfo120 extends BaseModule
 			],
 			'protocols'         => ['dfrn', 'activitypub'],
 			'services'          => Nodeinfo::getServices(),
-			'usage'             => Nodeinfo::getUsage(),
 			'openRegistrations' => Register::getPolicy() !== Register::CLOSED,
+			'usage'             => Nodeinfo::getUsage(),
 			'metadata'          => [
-				'nodeName' => $this->config->get('config', 'sitename'),
+				'nodeName'        => $this->config->get('config', 'sitename'),
+				'nodeDescription' => $this->config->get('config', 'info'),
 			],
 		];
 

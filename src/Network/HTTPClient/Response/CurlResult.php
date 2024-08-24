@@ -57,6 +57,11 @@ class CurlResult implements ICanHandleHttpResponses
 	private $isSuccess;
 
 	/**
+	 * @var boolean true (if HTTP 410 result) or false
+	 */
+	private $isGone;
+
+	/**
 	 * @var string the URL which was called
 	 */
 	private $url;
@@ -80,6 +85,11 @@ class CurlResult implements ICanHandleHttpResponses
 	 * @var boolean true if the URL has a redirect
 	 */
 	private $isRedirectUrl;
+
+	/**
+	 * @var boolean true if the URL has a permanent redirect
+	 */
+	private $redirectIsPermanent;
 
 	/**
 	 * @var boolean true if the curl request timed out
@@ -143,6 +153,7 @@ class CurlResult implements ICanHandleHttpResponses
 
 		$this->parseBodyHeader($result);
 		$this->checkSuccess();
+		$this->checkGone();
 		$this->checkRedirect();
 		$this->checkInfo();
 	}
@@ -189,6 +200,11 @@ class CurlResult implements ICanHandleHttpResponses
 		}
 	}
 
+	private function checkGone()
+	{
+		$this->isGone = $this->returnCode == 410;
+	}
+
 	private function checkRedirect()
 	{
 		if (!array_key_exists('url', $this->info)) {
@@ -197,7 +213,7 @@ class CurlResult implements ICanHandleHttpResponses
 			$this->redirectUrl = $this->info['url'];
 		}
 
-		if ($this->returnCode == 301 || $this->returnCode == 302 || $this->returnCode == 303 || $this->returnCode == 307) {
+		if ($this->returnCode == 301 || $this->returnCode == 302 || $this->returnCode == 303 || $this->returnCode == 307 || $this->returnCode == 308) {
 			$redirect_parts = parse_url($this->info['redirect_url'] ?? '');
 			if (empty($redirect_parts)) {
 				$redirect_parts = [];
@@ -224,10 +240,11 @@ class CurlResult implements ICanHandleHttpResponses
 			}
 
 			$this->redirectUrl = (string)Uri::fromParts((array)$redirect_parts);
-
 			$this->isRedirectUrl = true;
+			$this->redirectIsPermanent = $this->returnCode == 301 || $this->returnCode == 308;
 		} else {
 			$this->isRedirectUrl = false;
+			$this->redirectIsPermanent = false;
 		}
 	}
 
@@ -317,6 +334,12 @@ class CurlResult implements ICanHandleHttpResponses
 	}
 
 	/** {@inheritDoc} */
+	public function isGone(): bool
+	{
+		return $this->isSuccess;
+	}
+
+	/** {@inheritDoc} */
 	public function getUrl(): string
 	{
 		return $this->url;
@@ -338,6 +361,12 @@ class CurlResult implements ICanHandleHttpResponses
 	public function isRedirectUrl(): bool
 	{
 		return $this->isRedirectUrl;
+	}
+
+	/** {@inheritDoc} */
+	public function redirectIsPermanent(): bool
+	{
+		return $this->redirectIsPermanent;
 	}
 
 	/** {@inheritDoc} */

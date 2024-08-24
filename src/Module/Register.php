@@ -435,13 +435,14 @@ class Register extends BaseModule
 	}
 	public static function getPolicy(): int
 	{
+		$admins = User::getAdminList(['login_date']);
 		$days = DI::config()->get('system', 'admin_inactivity_limit');
-		if ($days == 0) {
+		if ($days == 0 || empty($admins)) {
 			return intval(DI::config()->get('config', 'register_policy'));
 		}
 
 		$inactive_since = DateTimeFormat::utc('now - ' . $days . ' day');
-		foreach (User::getAdminList(['login_date']) as $admin) {
+		foreach ($admins as $admin) {
 			if (strtotime($admin['login_date']) > strtotime($inactive_since)) {
 				return intval(DI::config()->get('config', 'register_policy'));
 			}

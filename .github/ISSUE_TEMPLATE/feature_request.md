@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2010 - 2024 the Friendica project
+
+SPDX-License-Identifier: CC0-1.0
+-->
+
 ---
 name: Feature request
 about: Suggest an idea for this project

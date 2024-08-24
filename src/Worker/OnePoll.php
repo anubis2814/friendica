@@ -165,12 +165,30 @@ class OnePoll
 		}
 
 		$cookiejar = tempnam(System::getTempPath(), 'cookiejar-onepoll-');
+		Item::incrementInbound(Protocol::FEED);
 		$curlResult = DI::httpClient()->get($contact['poll'], HttpClientAccept::FEED_XML, [HttpClientOptions::COOKIEJAR => $cookiejar, HttpClientOptions::REQUEST => HttpClientRequest::FEEDFETCHER]);
 		unlink($cookiejar);
+		Logger::debug('Polled feed', ['url' => $contact['poll'], 'http-code' => $curlResult->getReturnCode(), 'redirect-url' => $curlResult->getRedirectUrl()]);
 
 		if ($curlResult->isTimeout()) {
 			Logger::notice('Polling timed out', ['id' => $contact['id'], 'url' => $contact['poll']]);
 			return false;
+		}
+
+		if ($curlResult->isGone()) {
+			Logger::notice('URL is permanently gone', ['id' => $contact['id'], 'url' => $contact['poll']]);
+			Contact::remove($contact['id']);
+			return false;
+		}
+
+		if ($curlResult->redirectIsPermanent()) {
+			Logger::notice('Poll address permanently changed', [
+				'id' => $contact['id'],
+				'uid' => $contact['uid'],
+				'old' => $contact['poll'],
+				'new' => $curlResult->getRedirectUrl(),
+			]);
+			$success = Contact::updatePollUrl($contact['id'], $curlResult->getRedirectUrl());
 		}
 
 		$xml = $curlResult->getBodyString();

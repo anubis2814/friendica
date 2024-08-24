@@ -32,7 +32,7 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Version 1.0 of Nodeinfo 2, a sStandardized way of exposing metadata about a server running one of the distributed social networks.
- * @see https://github.com/jhass/nodeinfo/blob/master/PROTOCOL.md
+ * @see https://github.com/jaywink/nodeinfo2/blob/master/PROTOCOL.md
  */
 class NodeInfo210 extends BaseModule
 {

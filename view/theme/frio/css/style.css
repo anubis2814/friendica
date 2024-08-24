@@ -90,6 +90,9 @@ blockquote {
 	max-height: 0px !important;
 	overflow: hidden !important;
 }
+.inflated {
+	display: none;
+}
 
 /**
  * details tag
@@ -2804,14 +2807,15 @@ ul li:hover .contact-wrapper .contact-action-link:hover {
 }
 .event-wrapper .event-owner {
 	margin-bottom: 15px;
+	word-break: break-all;
 }
 .event-wrapper .event-owner img {
 	display: block;
 }
 .event-owner img {
-	margin-right: 5px;
 	height: 48px;
-	width: 48;
+	width: 48px;
+	max-width: 48px;
 	border-radius: 3px;
 }
 .event-wrapper .vevent {
@@ -3322,6 +3326,35 @@ li.addon {
 }
 #adminpage .addon .desc {
 	padding-left: 10px;
+}
+#adminpage h2 {
+	word-break: break-all;
+}
+#adminpage .table-logs thead tr {
+	display: grid;
+	grid-auto-flow: row;
+}
+#adminpage .table-logs tbody {
+	display: table;
+	width: 100%;
+	table-layout: fixed;
+}
+#adminpage .table-logs td {
+	word-break: break-word;
+}
+#adminpage .table-logs td.log-message {
+	width: 40%;
+}
+#logdetail td.log-message {
+	width: 80%;
+}
+@media (min-width: 600px) {
+	#adminpage .table-logs thead tr {
+		grid-auto-flow: column;
+	}
+	#adminpage .table-logs td.log-message {
+		width: 60%;
+	}
 }
 #admin-users #users tr.blocked {
 	background-color: #f8efc0;

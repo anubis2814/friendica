@@ -56,6 +56,11 @@ class Logout extends BaseModule
 		$this->session = $session;
 	}
 
+	protected function post(array $request = [])
+	{
+		// @todo check if POST is really used here
+		$this->rawContent($request);
+	}
 
 	/**
 	 * Process logout requests

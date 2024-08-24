@@ -22,7 +22,6 @@
 namespace Friendica\Module\WellKnown;
 
 use Friendica\BaseModule;
-use Friendica\Core\System;
 use Friendica\DI;
 
 /**
@@ -35,10 +34,22 @@ class NodeInfo extends BaseModule
 	{
 		$nodeinfo = [
 			'links' => [
-				['rel'  => 'http://nodeinfo.diaspora.software/ns/schema/1.0',
-				 'href' => DI::baseUrl() . '/nodeinfo/1.0'],
-				['rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
-				 'href' => DI::baseUrl() . '/nodeinfo/2.0'],
+				[
+					'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/1.0',
+					'href' => DI::baseUrl() . '/nodeinfo/1.0'
+				],
+				[
+					'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
+					'href' => DI::baseUrl() . '/nodeinfo/2.0'
+				],
+				[
+					'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.1',
+					'href' => DI::baseUrl() . '/nodeinfo/2.1'
+				],
+				[
+					'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.2',
+					'href' => DI::baseUrl() . '/nodeinfo/2.2'
+				],
 			]
 		];
 

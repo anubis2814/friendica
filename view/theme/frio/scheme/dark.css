@@ -248,6 +248,30 @@ input[type="submit"],
 	color: #f2dede;
 }
 
+/* Medium devices (desktops, 992px and up) */
+@media (min-width: 992px) {
+	.mod-home.is-not-singleuser .login-form > #login-form,
+	.mod-home.is-not-singleuser .login-form > #login-extra-links,
+	.mod-login #content #login-form {
+		background-color: $background_color;
+	}
+
+	.mod-home.is-not-singleuser .login-form > #login-form label,
+	.mod-login #content #login-form label {
+		color: $font_color;
+	}
+
+	.mod-home.is-not-singleuser .login-form::before,
+	.mod-login #content #login-form::before {
+		background-color: rgba(7, 34, 48, 0.25);
+	}
+
+	.mod-home.is-not-singleuser .login-form::after,
+	.mod-login #content #login-form::after {
+		background-color: rgba(7, 34, 48, 0.35);
+	}
+}
+
 @media (min-width: 768px) {
 	.wall-item-container .wall-item-links,
 	.wall-item-container .wall-item-actions button > a {

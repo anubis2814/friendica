@@ -1,9 +1,93 @@
-Version 2024.06 (unreleased)
+Version 2024.09 (unreleased)
   Friendica Core
 
-	Friendica Addons
+  Friendica Addons
 
-	Closed Issues
+  Closed Issues
+
+Version 2024.08 (2024-08-17)
+  Friendica Core
+    Updates to the translations AR, CS, DE, ES, FR, GD, HU, IS, IT, JA, NL, PL, RU, SV
+    Updates to the documentation [foss-, loma-one, mexon]
+    Updates to the themes (frio) [haheute]
+    General code cleanup [annando, haheute, mexon, MrPetovan]
+    Improved the redirection for contact actions [annando]
+    Improved the performance while fetching of replies [annando]
+    Improved the performance when visiting remote profiles [annando]
+    Improved OWA [annando]
+    Improved the procession of worker tasks [annando]
+    Improved performance in the probing process [annando]
+    Improved INBOX performance [annando]
+    Improved perfomance when expireing postings [annando]
+    Improved mirroring settings for RSS contacts [annando]
+    Improved supported image formats [annando]
+    Improved handling of CC for comments [annando]
+    Improved handling of "sensitive" flags for postings [annando]
+    Improved display of log levels [annando, tobiasd]
+    Improved handling of permissions for attachments [annando]
+    Improved addon handling [MrPetovan]
+    Improved API for channels and circles [annando]
+    Improved performance while displaying local postings [annando]
+    Improved federation with pixelfed, threads [annando]
+    Improved integration with Bluesky [annando]
+    Improved automatic cleanup of the database [annando]
+    Fixed access to restricted timeline via API [annando]
+    Fixed problem fetching from INBOXes [annando]
+    Fixed display of contacts from unavailable networks [annando]
+    Fixed profile display [annando]
+    Fixed a problem with local un-/follows [annando]
+    Fixed the uimport POST endpoint [annando]
+    Fixed problem with 0Auth logins [annando]
+    Fixed problem with @mentions in comments [annando]
+    Fixed XSS in profile fields [annando, apexrabbit, Devilx86, MrPetovan, ponlayookm]
+    Fixed bug in deleting unused cached avatar pictures [annando]
+    Fixed paging bug on the media tab of remote profiles [annando]
+    Fixed display of attached links [annando]
+    Fixed a bug in circle only contacts [annando]
+    Fixed display of moderation reports [MrPetovan, TheTomcat14]
+    Fixed delivery problems to group postings [annando]
+    Added monitoring service endpoint [annando]
+    Added admin option display_link_length to set the length of displayed links [annando]
+    Added the possibility to upload media files via API [annando]
+    Added console command to clear avatar cache [annando]
+    Added platform data to the API [annando]
+    Added parsing support for Nodeinfo 2.1 and 2.2 [annando]
+    Added node description to Nodeinfo [annando]
+    Added owner information of relay accounts [annando]
+    Added option for users about how to transmit postings with titles [annando]
+    Added for non HTML content of feeds [annando]
+    Added reshares for postings from Bluesky and tumbl [annando]
+    Added public forums with manual request approval [annando]
+    Added "next try" information for deferred worker jobs listing [annando]
+    Added support of FEP-e232 [annando]
+    Added automatic closure of registration if admin becomes inactive [annando]
+    Added channel only option for contacts [annando]
+
+  Friendica Addons
+    Updates to the translations AR, CS, DE, FR, IT, PL, SV
+    Blockbot
+      Added Relatica to good client list [hankg]
+      Improved agent identifier list [annando]
+    Bluesky
+      Added monitoring statistics [annando]
+      Added support of sensitive postings [annando]
+      Improved API handling [annando]
+      Improved fetching of user DID [annando]
+      Fixed conversion BS/Friendica handles [annando]
+    jsuploader
+      Improved detection of supported file types [annando]
+    mailstream
+      Improved image handling [mexon]
+    tumblr
+      Added monitoring statistics [annando]
+      Improved quoted postings [annando]
+
+  Closed Issues
+    11963, 13714, 13787, 13812, 13821, 13910, 14012, 14030, 14059,
+    14077, 14079, 14045, 14052, 14055, 14081, 14084, 14102, 14110,
+    14118, 14121, 14125, 14132, 14134, 14153, 14160, 14170, 14175,
+    14186, 14197, 14220, 14228, 14231, 14240, 14249, 14250, 14285,
+    14295, 14303, 14312, 14324, 14329, 14349, 14364
 
 Version 2024.03 (2024-03-21)
   Friendica Core
@@ -292,7 +376,7 @@ Version 2023.04 (2023-04-23)
     twitter
       Improve remote-self handling [annando]
     impressum
-      Avoide obfuscation on un-set email addresses [MrPestovan]
+      Avoide obfuscation on un-set email addresses [MrPetovan]
     notifyall
       Fixed a bug selecting the email addresses [nupplaphil]
     tumblr
@@ -1741,7 +1825,7 @@ Version 2018.05 (2018-06-01)
 
   Friendica Addons:
     Updates to the translations (DE, EN_GB, EN_US, ES, FI, FR, IS, IT, NL, PL, RU, ZH_CN) [translation teams]
-    advancedcontentfilter: new addon with advanced filter capabilities [MrPetova]
+    advancedcontentfilter: new addon with advanced filter capabilities [MrPetovan]
     catavatar: new addon for profile pictures based on David Revoy's cat-avatar generator [annando, fabrixxm, tobiasd]
     languagefilter: better help text [andyhee]
     mathjax: fixed the config form and adopted new CDN URL [tobiasd]

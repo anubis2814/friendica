@@ -60,7 +60,11 @@ class Login extends BaseModule
 
 	protected function content(array $request = []): string
 	{
-		$return_path = $request['return_path'] ?? $this->session->pop('return_path', '') ;
+		if (!empty($request['return_authorize'])) {
+			$return_path = 'oauth/authorize?' . $request['return_authorize'];
+		} else {
+			$return_path = $request['return_path'] ?? $this->session->pop('return_path', '') ;
+		}
 
 		if ($this->session->getLocalUserId()) {
 			$this->baseUrl->redirect($return_path);

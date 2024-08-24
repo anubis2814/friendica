@@ -28,6 +28,7 @@ use Friendica\Core\System;
 use Friendica\Database\Database;
 use Friendica\Model\Contact;
 use Friendica\Model\GServer;
+use Friendica\Model\Item;
 use Friendica\Model\Post;
 use Friendica\Module\Response;
 use Friendica\Network\HTTPException;
@@ -101,6 +102,7 @@ class PubSub extends \Friendica\BaseModule
 
 		$this->logger->info('Import item from Contact.', ['nickname' => $nickname, 'contact-nickname' => $contact['nick'], 'contact-id' => $contact['id']]);
 		$feedhub = '';
+		Item::incrementOutbound(Protocol::OSTATUS);
 		OStatus::import($xml, $importer, $contact, $feedhub);
 
 		throw new HTTPException\OKException();

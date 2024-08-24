@@ -66,7 +66,7 @@ abstract class DI
 	public static function setCompositeRootDependencyByHand()
 	{
 		$database = static::dba();
-		$database->setDependency(static::config(), static::profiler(), static::logger());
+		$database->setDependency(static::config(), static::profiler(), static::logger(), static::lock());
 	}
 
 	/**

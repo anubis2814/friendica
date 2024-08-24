@@ -290,12 +290,12 @@ class Circle
 			throw new HTTPException\NotFoundException('Circle not found.');
 		}
 
-		$cdata = Contact::getPublicAndUserContactID($cid, $circle['uid']);
-		if (empty($cdata['user'])) {
+		$ucid = Contact::getUserContactId($cid, $circle['uid']);
+		if (!$ucid) {
 			throw new HTTPException\NotFoundException('Invalid contact.');
 		}
 
-		return DBA::insert('group_member', ['gid' => $gid, 'contact-id' => $cdata['user']], Database::INSERT_IGNORE);
+		return DBA::insert('group_member', ['gid' => $gid, 'contact-id' => $ucid], Database::INSERT_IGNORE);
 	}
 
 	/**
@@ -318,12 +318,12 @@ class Circle
 			throw new HTTPException\NotFoundException('Circle not found.');
 		}
 
-		$cdata = Contact::getPublicAndUserContactID($cid, $circle['uid']);
-		if (empty($cdata['user'])) {
+		$ucid = Contact::getUserContactId($cid, $circle['uid']);
+		if (!$ucid) {
 			throw new HTTPException\NotFoundException('Invalid contact.');
 		}
 
-		return DBA::delete('group_member', ['gid' => $gid, 'contact-id' => $cid]);
+		return DBA::delete('group_member', ['gid' => $gid, 'contact-id' => $ucid]);
 	}
 
 	/**
@@ -347,12 +347,12 @@ class Circle
 		}
 
 		foreach ($contacts as $cid) {
-			$cdata = Contact::getPublicAndUserContactID($cid, $circle['uid']);
-			if (empty($cdata['user'])) {
+			$ucid = Contact::getUserContactId($cid, $circle['uid']);
+			if (!$ucid) {
 				throw new HTTPException\NotFoundException('Invalid contact.');
 			}
 
-			DBA::insert('group_member', ['gid' => $gid, 'contact-id' => $cdata['user']], Database::INSERT_IGNORE);
+			DBA::insert('group_member', ['gid' => $gid, 'contact-id' => $ucid], Database::INSERT_IGNORE);
 		}
 	}
 
@@ -379,12 +379,12 @@ class Circle
 		$contactIds = [];
 
 		foreach ($contacts as $cid) {
-			$cdata = Contact::getPublicAndUserContactID($cid, $circle['uid']);
-			if (empty($cdata['user'])) {
+			$ucid = Contact::getUserContactId($cid, $circle['uid']);
+			if (!$ucid) {
 				throw new HTTPException\NotFoundException('Invalid contact.');
 			}
 
-			$contactIds[] = $cdata['user'];
+			$contactIds[] = $ucid;
 		}
 
 		// Return status of deletion

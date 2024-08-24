@@ -45,7 +45,7 @@ class Acknowledge extends BaseApi
 
 	protected function content(array $request = []): string
 	{
-		DI::session()->set('return_path', $_REQUEST['return_path'] ?? '');
+		DI::session()->set('return_path', 'oauth/authorize?' . $request['return_authorize']);
 
 		$o = Renderer::replaceMacros(Renderer::getMarkupTemplate('oauth_authorize.tpl'), [
 			'$title'     => DI::l10n()->t('Authorize application connection'),

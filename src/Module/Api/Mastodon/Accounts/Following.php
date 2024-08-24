@@ -21,7 +21,7 @@
 
 namespace Friendica\Module\Api\Mastodon\Accounts;
 
-use Friendica\Core\System;
+use Friendica\Content\Widget;
 use Friendica\Database\DBA;
 use Friendica\DI;
 use Friendica\Model\Contact;
@@ -74,6 +74,9 @@ class Following extends BaseApi
 
 				$params['order'] = ['pid'];
 			}
+
+			$networks  = Widget::unavailableNetworks();
+			$condition = DBA::mergeConditions($condition, array_merge(["NOT `network` IN (" . substr(str_repeat("?, ", count($networks)), 0, -2) . ")"], $networks));
 
 			$accounts = [];
 

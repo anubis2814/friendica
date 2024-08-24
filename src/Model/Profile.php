@@ -622,8 +622,10 @@ class Profile
 		$bd_format = DI::l10n()->t('g A l F d'); // 8 AM Friday January 18
 		$classtoday = '';
 
-		$condition = ["`uid` = ? AND `type` != 'birthday' AND `start` < ? AND `start` >= ?",
-			$uid, DateTimeFormat::utc('now + 7 days'), DateTimeFormat::utc('now - 1 days')];
+		$condition = [
+			"`uid` = ? AND `type` != 'birthday' AND `start` < ? AND `start` >= ?",
+			$uid, DateTimeFormat::utc('now + 7 days'), DateTimeFormat::utc('now - 1 days')
+		];
 		$s = DBA::select('event', [], $condition, ['order' => ['start']]);
 
 		$r = [];
@@ -633,9 +635,11 @@ class Profile
 			$total = 0;
 
 			while ($rr = DBA::fetch($s)) {
-				$condition = ['parent-uri' => $rr['uri'], 'uid' => $rr['uid'], 'author-id' => $pcid,
+				$condition = [
+					'parent-uri' => $rr['uri'], 'uid' => $rr['uid'], 'author-id' => $pcid,
 					'vid' => [Verb::getID(Activity::ATTEND), Verb::getID(Activity::ATTENDMAYBE)],
-					'visible' => true, 'deleted' => false];
+					'visible' => true, 'deleted' => false
+				];
 				if (!Post::exists($condition)) {
 					continue;
 				}
@@ -724,7 +728,8 @@ class Profile
 		if (!empty($search)) {
 			$publish = (DI::config()->get('system', 'publish_all') ? '' : "AND `publish` ");
 			$searchTerm = '%' . $search . '%';
-			$condition = ["`verified` AND NOT `blocked` AND NOT `account_removed` AND NOT `account_expired`
+			$condition = [
+				"`verified` AND NOT `blocked` AND NOT `account_removed` AND NOT `account_expired`
 				$publish
 				AND ((`name` LIKE ?) OR
 				(`nickname` LIKE ?) OR
@@ -735,7 +740,8 @@ class Profile
 				(`pub_keywords` LIKE ?) OR
 				(`prv_keywords` LIKE ?))",
 				$searchTerm, $searchTerm, $searchTerm, $searchTerm,
-				$searchTerm, $searchTerm, $searchTerm, $searchTerm];
+				$searchTerm, $searchTerm, $searchTerm, $searchTerm
+			];
 		} else {
 			$condition = ['verified' => true, 'blocked' => false, 'account_removed' => false, 'account_expired' => false];
 			if (!DI::config()->get('system', 'publish_all')) {
@@ -836,6 +842,46 @@ class Profile
 			DBA::update('profile', $profile, ['id' => $profile['id']]);
 		} else if (!empty($profile['id'])) {
 			DBA::delete('profile', ['id' => $profile['id']]);
+		}
+	}
+
+	/**
+	 * Get "about" field with the added responsible relay contact if appropriate.
+	 *
+	 * @param string $about
+	 * @param integer|null $parent_uid
+	 * @param integer $account_type
+	 * @param string $language
+	 * @return string
+	 */
+	public static function addResponsibleRelayContact(string $about = null, int $parent_uid = null, int $account_type, string $language): ?string
+	{
+		if (($account_type != User::ACCOUNT_TYPE_RELAY) || empty($parent_uid)) {
+			return $about;
+		}
+
+		$parent = User::getOwnerDataById($parent_uid);
+		if (strpos($about, $parent['addr']) || strpos($about, $parent['url'])) {
+			return $about;
+		}
+
+		$l10n = DI::l10n()->withLang($language);
+
+		return $about .= "\n" . $l10n->t('Responsible account: %s', $parent['addr']);
+	}
+
+	/**
+	 * Set "about" field with the added responsible relay contact if appropriate.
+	 *
+	 * @param integer $uid
+	 * @return void
+	 */
+	public static function setResponsibleRelayContact(int $uid)
+	{
+		$owner = User::getOwnerDataById($uid);
+		$about = self::addResponsibleRelayContact($owner['about'], $owner['parent-uid'], $owner['account-type'], $owner['language']);
+		if ($about != $owner['about']) {
+			self::update(['about' => $about], $uid);
 		}
 	}
 }

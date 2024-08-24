@@ -49,7 +49,7 @@ class Tags extends BaseModule
 		$this->database = $database;
 	}
 
-	protected function rawContent(array $request = [])
+	protected function post(array $request = [])
 	{
 		$tags     = $request['s'] ?? '';
 		$perPage  = intval($request['n'] ?? self::DEFAULT_ITEMS_PER_PAGE);

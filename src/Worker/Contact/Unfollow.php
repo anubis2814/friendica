@@ -41,7 +41,12 @@ class Unfollow
 	 */
 	public static function execute(int $cid, int $uid)
 	{
-		$contact = Contact::getById($cid);
+		$ucid = Contact::getUserContactId($cid, $uid);
+		if (!$ucid) {
+			return;
+		}
+
+		$contact = Contact::getById($ucid);
 		if (empty($contact)) {
 			return;
 		}
@@ -53,7 +58,11 @@ class Unfollow
 
 		$result = Protocol::unfollow($contact, $owner);
 		if ($result === false) {
-			Worker::defer(self::WORKER_DEFER_LIMIT);
+			if (!Worker::defer(self::WORKER_DEFER_LIMIT)) {
+				Contact::removeSharer($contact);	
+			}
+		} else {
+			Contact::removeSharer($contact);
 		}
 	}
 }

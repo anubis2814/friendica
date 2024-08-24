@@ -22,6 +22,8 @@
 namespace Friendica\Module;
 
 use Friendica\BaseModule;
+use Friendica\Core\Protocol;
+use Friendica\Model\Item;
 use Friendica\Model\User;
 use Friendica\Network\HTTPException;
 use Friendica\Protocol\Feed as ProtocolFeed;
@@ -67,6 +69,8 @@ class Feed extends BaseModule
 		if ($owner['blocked']) {
 			throw new HTTPException\UnauthorizedException($this->t('Access to this profile has been restricted.'));
 		}
+
+		Item::incrementOutbound(Protocol::FEED);
 
 		$feed = ProtocolFeed::atom($owner, $last_update, 10, $type);
 

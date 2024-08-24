@@ -42,7 +42,12 @@ class RevokeFollow
 	 */
 	public static function execute(int $cid, int $uid)
 	{
-		$contact = Contact::getById($cid);
+		$ucid = Contact::getUserContactId($cid, $uid);
+		if (!$ucid) {
+			return;
+		}
+
+		$contact = Contact::getById($ucid);
 		if (empty($contact)) {
 			return;
 		}
@@ -53,7 +58,11 @@ class RevokeFollow
 		}
 
 		if (!Protocol::revokeFollow($contact, $owner)) {
-			Worker::defer(self::WORKER_DEFER_LIMIT);
+			if (!Worker::defer(self::WORKER_DEFER_LIMIT)) {
+				Contact::removeFollower($contact);
+			}
+		} else {
+			Contact::removeFollower($contact);
 		}
 	}
 }

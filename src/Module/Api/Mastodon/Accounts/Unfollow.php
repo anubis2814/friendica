@@ -40,12 +40,12 @@ class Unfollow extends BaseApi
 			$this->logAndJsonError(422, $this->errorFactory->UnprocessableEntity());
 		}
 
-		$cdata = Contact::getPublicAndUserContactID($this->parameters['id'], $uid);
-		if (empty($cdata['user'])) {
+		$ucid = Contact::getUserContactId($this->parameters['id'], $uid);
+		if (!$ucid) {
 			$this->logAndJsonError(404, $this->errorFactory->RecordNotFound());
 		}
 
-		$contact = Contact::getById($cdata['user']);
+		$contact = Contact::getById($ucid);
 
 		Contact::unfollow($contact);
 

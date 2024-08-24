@@ -244,7 +244,7 @@ class Probe
 			return [];
 		}
 
-		if (!is_object($xrd) && !empty($url)) {
+		if ($ssl_connection_error && !is_object($xrd) && !empty($url)) {
 			$curlResult = DI::httpClient()->get($url, HttpClientAccept::XRD_XML, [HttpClientOptions::TIMEOUT => $xrd_timeout, HttpClientOptions::REQUEST => HttpClientRequest::CONTACTINFO]);
 			$connection_error = ($curlResult->getErrorNumber() == CURLE_COULDNT_CONNECT) || ($curlResult->getReturnCode() == 0);
 			if ($curlResult->isTimeout()) {
@@ -568,7 +568,7 @@ class Probe
 			}
 
 			$webfinger = self::getWebfinger($parts['scheme'] . '://' . $host . self::WEBFINGER, HttpClientAccept::JRD_JSON, $uri, $addr);
-			if (empty($webfinger)) {
+			if (empty($webfinger) && !is_null($webfinger)) {
 				$lrdd = self::hostMeta($host);
 			}
 
@@ -582,7 +582,7 @@ class Probe
 					}
 
 					$webfinger = self::getWebfinger($parts['scheme'] . '://' . $host . self::WEBFINGER, HttpClientAccept::JRD_JSON, $uri, $addr);
-					if (empty($webfinger)) {
+					if (empty($webfinger) && !is_null($webfinger)) {
 						$lrdd = self::hostMeta($host);
 					}
 				}
@@ -604,11 +604,12 @@ class Probe
 				return [];
 			}
 
-			if (empty($webfinger)) {
+			if (is_null($webfinger)) {
 				$webfinger = self::getWebfinger('http://' . $host . self::WEBFINGER, HttpClientAccept::JRD_JSON, $uri, $addr);
-				if (self::$isTimeout) {
+				if (self::$isTimeout || is_null($webfinger)) {
 					return [];
 				}
+				$baseurl = 'http://' . $host;
 			} else {
 				$baseurl = 'https://' . $host;
 			}
@@ -619,8 +620,6 @@ class Probe
 					return [];
 				}
 				$baseurl = self::$baseurl;
-			} else {
-				$baseurl = 'http://' . $host;
 			}
 		} else {
 			Logger::info('URI was not detectable', ['uri' => $uri]);
@@ -661,11 +660,11 @@ class Probe
 	 *
 	 * @return array webfinger results
 	 */
-	private static function getWebfinger(string $template, string $type, string $uri, string $addr): array
+	private static function getWebfinger(string $template, string $type, string $uri, string $addr): ?array
 	{
 		if (Network::isUrlBlocked($template)) {
 			Logger::info('Domain is blocked', ['url' => $template]);
-			return [];
+			return null;
 		}
 
 		// First try the address because this is the primary purpose of webfinger
@@ -673,8 +672,8 @@ class Probe
 			$detected = $addr;
 			$path = str_replace('{uri}', urlencode('acct:' . $addr), $template);
 			$webfinger = self::webfinger($path, $type);
-			if (self::$isTimeout) {
-				return [];
+			if (is_null($webfinger)) {
+				return null;
 			}
 		}
 
@@ -683,8 +682,8 @@ class Probe
 			$detected = $uri;
 			$path = str_replace('{uri}', urlencode($uri), $template);
 			$webfinger = self::webfinger($path, $type);
-			if (self::$isTimeout) {
-				return [];
+			if (is_null($webfinger)) {
+				return null;
 			}
 		}
 
@@ -958,7 +957,7 @@ class Probe
 		if (!empty($json['public_forum'])) {
 			$data['community'] = $json['public_forum'];
 			$data['account-type'] = User::ACCOUNT_TYPE_COMMUNITY;
-		} elseif ($json['channel_type'] == 'normal') {
+		} elseif (($json['channel_type'] ?? '') == 'normal') {
 			$data['account-type'] = User::ACCOUNT_TYPE_PERSON;
 		}
 
@@ -1001,7 +1000,7 @@ class Probe
 	 * @return array webfinger data
 	 * @throws HTTPException\InternalServerErrorException
 	 */
-	private static function webfinger(string $url, string $type): array
+	private static function webfinger(string $url, string $type): ?array
 	{
 		try {
 			$curlResult = DI::httpClient()->get(
@@ -1011,12 +1010,12 @@ class Probe
 			);
 		} catch (\Throwable $e) {
 			Logger::notice($e->getMessage(), ['url' => $url, 'type' => $type, 'class' => get_class($e)]);
-			return [];
+			return null;
 		}
 
 		if ($curlResult->isTimeout()) {
 			self::$isTimeout = true;
-			return [];
+			return null;
 		}
 		$data = $curlResult->getBodyString();
 

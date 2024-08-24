@@ -413,6 +413,29 @@ class User
 	}
 
 	/**
+	 * Returns the user id of a given contact id
+	 *
+	 * @param int $cid
+	 *
+	 * @return integer user id
+	 * @throws Exception
+	 */
+	public static function getIdForContactId(int $cid): int
+	{
+		$account = Contact::selectFirstAccountUser(['pid', 'self', 'uid'], ['id' => $cid]);
+		if (empty($account['pid'])) {
+			return 0;
+		}
+
+		if ($account['self']) {
+			return $account['uid'];
+		}
+
+		$self = Contact::selectFirstAccountUser(['uid'], ['pid' => $cid, 'self' => true]);
+		return $self['uid'] ?? 0;
+	}
+
+	/**
 	 * Get a user based on its email
 	 *
 	 * @param string $email

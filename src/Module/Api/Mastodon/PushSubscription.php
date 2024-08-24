@@ -98,13 +98,13 @@ class PushSubscription extends BaseApi
 		}
 
 		$fields = [
-			Notification::TYPE_FOLLOW       => $request['data']['alerts'][Notification::TYPE_FOLLOW] ?? false,
-			Notification::TYPE_LIKE         => $request['data']['alerts'][Notification::TYPE_LIKE] ?? false,
-			Notification::TYPE_RESHARE      => $request['data']['alerts'][Notification::TYPE_RESHARE] ?? false,
-			Notification::TYPE_MENTION      => $request['data']['alerts'][Notification::TYPE_MENTION] ?? false,
-			Notification::TYPE_POLL         => $request['data']['alerts'][Notification::TYPE_POLL] ?? false,
-			Notification::TYPE_INTRODUCTION => $request['data']['alerts'][Notification::TYPE_INTRODUCTION] ?? false,
-			Notification::TYPE_POST         => $request['data']['alerts'][Notification::TYPE_POST] ?? false,
+			Notification::TYPE_FOLLOW       => $this->setBoolean($request['data']['alerts'][Notification::TYPE_FOLLOW] ?? false),
+			Notification::TYPE_LIKE         => $this->setBoolean($request['data']['alerts'][Notification::TYPE_LIKE] ?? false),
+			Notification::TYPE_RESHARE      => $this->setBoolean($request['data']['alerts'][Notification::TYPE_RESHARE] ?? false),
+			Notification::TYPE_MENTION      => $this->setBoolean($request['data']['alerts'][Notification::TYPE_MENTION] ?? false),
+			Notification::TYPE_POLL         => $this->setBoolean($request['data']['alerts'][Notification::TYPE_POLL] ?? false),
+			Notification::TYPE_INTRODUCTION => $this->setBoolean($request['data']['alerts'][Notification::TYPE_INTRODUCTION] ?? false),
+			Notification::TYPE_POST         => $this->setBoolean($request['data']['alerts'][Notification::TYPE_POST] ?? false),
 		];
 
 		$ret = Subscription::update($application['id'], $uid, $fields);
@@ -118,6 +118,14 @@ class PushSubscription extends BaseApi
 
 		$subscriptionObj = $this->subscriptionFac->createForApplicationIdAndUserId($application['id'], $uid);
 		$this->response->addJsonContent($subscriptionObj->toArray());
+	}
+
+	private function setBoolean($input): bool
+	{
+		if (is_bool($input)) {
+			return $input;
+		}
+		return strtolower($input) == 'true';
 	}
 
 	protected function delete(array $request = []): void

@@ -96,6 +96,12 @@ class Notifications extends BaseNotifications
 		];
 	}
 
+	protected function post(array $request = [])
+	{
+		// @todo check if POST is really used here
+		$this->content($request);
+	}
+
 	protected function content(array $request = []): string
 	{
 		Nav::setSelected('notifications');

@@ -29,6 +29,13 @@ use Friendica\Test\src\Module\Api\ApiTest;
 
 class DestroyTest extends ApiTest
 {
+	protected function setUp(): void
+	{
+		parent::setUp();
+
+		$this->useHttpMethod(Router::POST);
+	}
+
 	/**
 	 * Test the api_direct_messages_destroy() function.
 	 *
@@ -37,6 +44,7 @@ class DestroyTest extends ApiTest
 	public function testApiDirectMessagesDestroy()
 	{
 		$this->expectException(\Friendica\Network\HTTPException\BadRequestException::class);
+
 		(new Destroy(DI::dba(), DI::mstdnError(), DI::app(), DI::l10n(), DI::baseUrl(), DI::args(), DI::logger(), DI::profiler(), DI::apiResponse(), [], ['extension' => 'json']))
 			->run($this->httpExceptionMock);
 	}

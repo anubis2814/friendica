@@ -47,10 +47,12 @@ use Friendica\Core\L10n;
 use Friendica\Core\PConfig\Capability\IManagePersonalConfigValues;
 use Friendica\Core\Renderer;
 use Friendica\Core\Session\Capability\IHandleUserSessions;
+use Friendica\Core\Worker;
 use Friendica\Database\DBA;
 use Friendica\Database\Database;
 use Friendica\Model\Contact;
 use Friendica\Model\Circle;
+use Friendica\Model\Post;
 use Friendica\Model\Profile;
 use Friendica\Module\Response;
 use Friendica\Module\Security\Login;
@@ -231,7 +233,7 @@ class Network extends Timeline
 			} else {
 				$items = $this->getItems();
 			}
-	
+
 			$o .= $this->conversation->render($items, Conversation::MODE_NETWORK, false, false, $this->getOrder(), $this->session->getLocalUserId());
 		} catch (\Exception $e) {
 			$o .= $this->l10n->t('Error %d (%s) while fetching the timeline.', $e->getCode(), $e->getMessage());
@@ -470,23 +472,20 @@ class Network extends Timeline
 			$items = array_reverse($items);
 		}
 
-		if ($this->database->isResult($items)) {
-			$parents = array_column($items, 'uri-id');
-		} else {
-			$parents = [];
+		if ($this->ping || !$this->database->isResult($items)) {
+			return $items;
 		}
 
-		// We aren't going to try and figure out at the item, circle, and page
-		// level which items you've seen and which you haven't. If you're looking
-		// at the top level network page just mark everything seen.
-		if (!$this->circleId && !$this->star && !$this->mention) {
-			$condition = ['unseen' => true, 'uid' => $this->session->getLocalUserId()];
-			$this->setItemsSeenByCondition($condition);
-		} elseif (!empty($parents)) {
-			$condition = ['unseen' => true, 'uid' => $this->session->getLocalUserId(), 'parent-uri-id' => $parents];
-			$this->setItemsSeenByCondition($condition);
+		$this->setItemsSeenByCondition(['unseen' => true, 'uid' => $this->session->getLocalUserId(), 'parent-uri-id' => array_column($items, 'uri-id')]);
+
+		$posts = Post::selectToArray(['uri-id'], ['unseen' => true, 'uid' => $this->session->getLocalUserId()], ['limit' => 100]);
+		if (!empty($posts)) {
+			$this->setItemsSeenByCondition(['unseen' => true, 'uid' => $this->session->getLocalUserId(), 'uri-id' => array_column($posts, 'uri-id')]);
 		}
 
+		if (count($posts) == 100) {
+			Worker::add(Worker::PRIORITY_MEDIUM, 'SetSeen', $this->session->getLocalUserId());
+		}
 		return $items;
 	}
 

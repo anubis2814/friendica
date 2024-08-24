@@ -54,7 +54,7 @@ return [
 
 		// adjust_poll_frequency (Boolean)
 		// Automatically detect and set the best feed poll frequency.
-		'adjust_poll_frequency' => false,
+		'adjust_poll_frequency' => true,
 
 		// allow_relay_channels (Boolean)
 		// Allow Users to set remote_self

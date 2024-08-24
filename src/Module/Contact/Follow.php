@@ -215,7 +215,7 @@ class Follow extends BaseModule
 
 			$this->baseUrl->redirect($returnPath);
 		} elseif (!empty($result['cid'])) {
-			$this->baseUrl->redirect('contact/' . $result['cid']);
+			$this->baseUrl->redirect('contact/' . Contact::getPublicContactId($result['cid'], $this->session->getLocalUserId()));
 		}
 
 		$this->sysMessages->addNotice($this->t('The contact could not be added.'));

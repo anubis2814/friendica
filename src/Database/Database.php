@@ -22,6 +22,8 @@
 namespace Friendica\Database;
 
 use Friendica\Core\Config\Capability\IManageConfigValues;
+use Friendica\Core\Lock\Capability\ICanLock;
+use Friendica\Core\Lock\Exception\LockPersistenceException;
 use Friendica\Core\System;
 use Friendica\Database\Definition\DbaDefinition;
 use Friendica\Database\Definition\ViewDefinition;
@@ -50,6 +52,8 @@ class Database
 	const INSERT_UPDATE  = 1;
 	const INSERT_IGNORE  = 2;
 
+	const LOCK_OPTIMIZE = 'database::optimize_tables';
+
 	protected $connected = false;
 
 	/**
@@ -64,6 +68,11 @@ class Database
 	 * @var LoggerInterface
 	 */
 	protected $logger = null;
+	/**
+	 * @var ICanLock
+	 */
+	protected $syslock = null;
+
 	protected $server_info = '';
 	/** @var PDO|mysqli */
 	protected $connection;
@@ -106,11 +115,12 @@ class Database
 	 *
 	 * @todo Make this method obsolete - use a clean pattern instead ...
 	 */
-	public function setDependency(IManageConfigValues $config, Profiler $profiler, LoggerInterface $logger)
+	public function setDependency(IManageConfigValues $config, Profiler $profiler, LoggerInterface $logger, ICanLock $lock)
 	{
 		$this->logger   = $logger;
 		$this->profiler = $profiler;
 		$this->config   = $config;
+		$this->syslock  = $lock;
 	}
 
 	/**
@@ -1755,7 +1765,42 @@ class Database
 	 */
 	public function optimizeTable(string $table): bool
 	{
-		return $this->e("OPTIMIZE TABLE " . DBA::buildTableString([$table])) !== false;
+		if ($this->syslock->isLocked(self::LOCK_OPTIMIZE)) {
+			$this->logger->info('Optimization is locked');
+			return false;
+		}
+
+		if (!$this->acquireOptimizeLock()) {
+			return false;
+		}
+
+		$result = $this->e("OPTIMIZE TABLE " . DBA::buildTableString([$table])) !== false;
+
+		$this->releaseOptimizeLock();
+
+		return $result;
+	}
+
+	/**
+	 * Acquire a lock to prevent a table optimization
+	 *
+	 * @return bool 
+	 * @throws LockPersistenceException 
+	 */
+	public function acquireOptimizeLock(): bool
+	{
+		return $this->syslock->acquire(self::LOCK_OPTIMIZE, 0);
+	}
+
+	/**
+	 * Release the table optimization lock
+	 *
+	 * @return bool 
+	 * @throws LockPersistenceException 
+	 */
+	public function releaseOptimizeLock(): bool
+	{
+		return $this->syslock->release(self::LOCK_OPTIMIZE);
 	}
 
 	/**

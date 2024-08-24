@@ -2971,6 +2971,7 @@ class Diaspora
 
 			$postResult = DI::httpClient()->post($dest_url . '/', $envelope, ['Content-Type' => $content_type], 0, HttpClientRequest::DIASPORA);
 			$return_code = $postResult->getReturnCode();
+			Item::incrementOutbound(Protocol::DIASPORA);
 		} else {
 			Logger::notice('test_mode');
 			return 200;

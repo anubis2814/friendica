@@ -1,21 +1,9 @@
 <?php
 /**
- * @copyright Copyright (C) 2010-2024, the Friendica project
+ * Copyright (C) 2010-2024, the Friendica project
+ * SPDX-FileCopyrightText: 2010-2024 the Friendica project
  *
- * @license GNU AGPL version 3 or any later version
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  *
  * Automatic post-database structure change updates
  *
@@ -1475,6 +1463,42 @@ function update_1564()
 		User::block($user['uid']);
 	}
 	DBA::close($users);
+
+	return Update::SUCCESS;
+}
+
+function update_1566()
+{
+	$users = DBA::select('user', ['uid'], ["`account-type` = ? AND `verified` AND NOT `blocked` AND NOT `account_removed` AND NOT `account_expired` AND `uid` > ?", User::ACCOUNT_TYPE_RELAY, 0]);
+	while ($user = DBA::fetch($users)) {
+		Profile::setResponsibleRelayContact($user['uid']);
+	}
+	DBA::close($users);
+}
+
+function update_1571()
+{
+	$profiles = DBA::select('profile', ['uid', 'homepage', 'xmpp', 'matrix']);
+	while ($profile = DBA::fetch($profiles)) {
+		$homepage = str_replace(['<', '>', '"', ' '], '', $profile['homepage']);
+		$xmpp     = str_replace(['<', '>', '"', ' '], '', $profile['xmpp']);
+		$matrix   = str_replace(['<', '>', '"', ' '], '', $profile['matrix']);
+
+		$fields = [];
+		if ($homepage != $profile['homepage']) {
+			$fields['homepage'] = $homepage;
+		}
+		if ($xmpp != $profile['xmpp']) {
+			$fields['xmpp'] = $xmpp;
+		}
+		if ($matrix != $profile['matrix']) {
+			$fields['matrix'] = $matrix;
+		}
+		if (!empty($fields)) {
+			Profile::update($fields, $profile['uid']);
+		}
+	}
+	DBA::close($profiles);
 
 	return Update::SUCCESS;
 }

@@ -26,6 +26,7 @@ use Friendica\Core\System;
 use Friendica\DI;
 use Friendica\Model\Photo;
 use Friendica\Model\User;
+use Friendica\Network\HTTPException\BadRequestException;
 use Friendica\Network\HTTPException\NotFoundException;
 use Friendica\Protocol\ActivityNamespace;
 use Friendica\Protocol\Salmon;
@@ -43,7 +44,7 @@ class Xrd extends BaseModule
 		// @TODO: Replace with parameter from router
 		if (DI::args()->getArgv()[0] == 'xrd') {
 			if (empty($_GET['uri'])) {
-				return;
+				throw new BadRequestException();
 			}
 
 			$uri = urldecode(trim($_GET['uri']));
@@ -54,7 +55,7 @@ class Xrd extends BaseModule
 			}
 		} else {
 			if (empty($_GET['resource'])) {
-				return;
+				throw new BadRequestException();
 			}
 
 			$uri = urldecode(trim($_GET['resource']));
@@ -68,13 +69,15 @@ class Xrd extends BaseModule
 		if (substr($uri, 0, 4) === 'http') {
 			$name = ltrim(basename($uri), '~');
 			$host = parse_url($uri, PHP_URL_HOST);
-		} else {
+		} else if (preg_match('/^[[:alpha:]][[:alnum:]+-.]+:/', $uri)) {
 			$local = str_replace('acct:', '', $uri);
 			if (substr($local, 0, 2) == '//') {
 				$local = substr($local, 2);
 			}
 
 			list($name, $host) = explode('@', $local);
+		} else {
+			throw new BadRequestException();
 		}
 
 		if (!empty($host) && $host !== DI::baseUrl()->getHost()) {
@@ -270,56 +273,63 @@ class Xrd extends BaseModule
 				],
 				'4:link' => [
 					'@attributes' => [
+						'rel'  => 'self',
+						'type' => 'application/activity+json',
+						'href' => $owner['url']
+					]
+				],
+				'5:link' => [
+					'@attributes' => [
 						'rel'  => ActivityNamespace::HCARD,
 						'type' => 'text/html',
 						'href' => $baseURL . '/hcard/' . $owner['nickname']
 					]
 				],
-				'5:link' => [
+				'6:link' => [
 					'@attributes' => [
 						'rel'  => ActivityNamespace::WEBFINGERAVATAR,
 						'type' => $avatar['type'],
 						'href' => User::getAvatarUrl($owner)
 					]
 				],
-				'6:link' => [
+				'7:link' => [
 					'@attributes' => [
 						'rel'  => ActivityNamespace::DIASPORA_SEED,
 						'type' => 'text/html',
 						'href' => $baseURL
 					]
 				],
-				'7:link' => [
+				'8:link' => [
 					'@attributes' => [
 						'rel'  => 'salmon',
 						'href' => $baseURL . '/salmon/' . $owner['nickname']
 					]
 				],
-				'8:link' => [
+				'9:link' => [
 					'@attributes' => [
 						'rel'  => 'http://salmon-protocol.org/ns/salmon-replies',
 						'href' => $baseURL . '/salmon/' . $owner['nickname']
 					]
 				],
-				'9:link' => [
+				'10:link' => [
 					'@attributes' => [
 						'rel'  => 'http://salmon-protocol.org/ns/salmon-mention',
 						'href' => $baseURL . '/salmon/' . $owner['nickname'] . '/mention'
 					]
 				],
-				'10:link' => [
+				'11:link' => [
 					'@attributes' => [
 						'rel'      => ActivityNamespace::OSTATUSSUB,
 						'template' => $baseURL . '/contact/follow?url={uri}'
 					]
 				],
-				'11:link' => [
+				'12:link' => [
 					'@attributes' => [
 						'rel'  => 'magic-public-key',
 						'href' => 'data:application/magic-public-key,' . Salmon::salmonKey($owner['spubkey'])
 					]
 				],
-				'12:link' => [
+				'13:link' => [
 					'@attributes' => [
 						'rel'  => ActivityNamespace::OPENWEBAUTH,
 						'type' => 'application/x-zot+json',

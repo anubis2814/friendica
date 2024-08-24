@@ -36,7 +36,7 @@ use Friendica\Protocol\Diaspora;
  */
 class Activity extends BaseModule
 {
-	protected function rawContent(array $request = [])
+	protected function post(array $request = [])
 	{
 		if (!DI::userSession()->isAuthenticated()) {
 			throw new HTTPException\ForbiddenException();

@@ -26,6 +26,7 @@ use Friendica\Core\L10n;
 use Friendica\Core\Protocol;
 use Friendica\Database\Database;
 use Friendica\Model\GServer;
+use Friendica\Model\Item;
 use Friendica\Model\Post;
 use Friendica\Module\Response;
 use Friendica\Protocol\ActivityNamespace;
@@ -210,6 +211,7 @@ class Salmon extends \Friendica\BaseModule
 
 		$contact = $contact ?: [];
 
+		Item::incrementOutbound(Protocol::OSTATUS);
 		OStatus::import($data, $importer, $contact, $hub);
 
 		throw new HTTPException\OKException();

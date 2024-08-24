@@ -22,9 +22,11 @@
 namespace Friendica\Module\ActivityPub;
 
 use Friendica\Core\Logger;
+use Friendica\Core\Protocol;
 use Friendica\Core\System;
 use Friendica\Database\DBA;
 use Friendica\DI;
+use Friendica\Model\Item;
 use Friendica\Model\User;
 use Friendica\Module\BaseApi;
 use Friendica\Module\Special\HTTPException;
@@ -103,6 +105,7 @@ class Inbox extends BaseApi
 			$uid = 0;
 		}
 
+		Item::incrementInbound(Protocol::ACTIVITYPUB);
 		ActivityPub\Receiver::processInbox($postdata, $_SERVER, $uid);
 
 		throw new \Friendica\Network\HTTPException\AcceptedException();

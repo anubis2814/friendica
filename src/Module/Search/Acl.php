@@ -67,6 +67,11 @@ class Acl extends BaseModule
 		$this->database = $database;
 	}
 
+	protected function post(array $request = [])
+	{
+		$this->rawContent($request);
+	}
+
 	protected function rawContent(array $request = [])
 	{
 		if (!$this->session->getLocalUserId()) {

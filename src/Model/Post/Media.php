@@ -88,8 +88,8 @@ class Media
 		// "document" has got the lowest priority. So when the same file is both attached as document
 		// and embedded as picture then we only store the picture or replace the document
 		$found = DBA::selectFirst('post-media', ['type'], ['uri-id' => $media['uri-id'], 'url' => $media['url']]);
-		if (!$force && !empty($found) && (($found['type'] != self::DOCUMENT) || ($media['type'] == self::DOCUMENT))) {
-			Logger::info('Media already exists', ['uri-id' => $media['uri-id'], 'url' => $media['url']]);
+		if (!$force && !empty($found) && (!in_array($found['type'], [self::UNKNOWN, self::DOCUMENT]) || ($media['type'] == self::DOCUMENT))) {
+			Logger::info('Media already exists', ['uri-id' => $media['uri-id'], 'url' => $media['url'], 'found' => $found['type'], 'new' => $media['type']]);
 			return false;
 		}
 
@@ -444,42 +444,46 @@ class Media
 			return $data;
 		}
 
-		$type = explode('/', current(explode(';', $data['mimetype'])));
+		$data['type'] = self::getType($data['mimetype']);
+		return $data;
+	}
+
+	public static function getType(string $mimeType): int
+	{
+		$type = explode('/', current(explode(';', $mimeType)));
 		if (count($type) < 2) {
-			Logger::info('Unknown MimeType', ['type' => $type, 'media' => $data]);
-			$data['type'] = self::UNKNOWN;
-			return $data;
+			Logger::info('Unknown MimeType', ['type' => $type, 'media' => $mimeType]);
+			return self::UNKNOWN;
 		}
 
 		$filetype = strtolower($type[0]);
 		$subtype = strtolower($type[1]);
 
 		if ($filetype == 'image') {
-			$data['type'] = self::IMAGE;
+			$type = self::IMAGE;
 		} elseif ($filetype == 'video') {
-			$data['type'] = self::VIDEO;
+			$type = self::VIDEO;
 		} elseif ($filetype == 'audio') {
-			$data['type'] = self::AUDIO;
+			$type = self::AUDIO;
 		} elseif (($filetype == 'text') && ($subtype == 'html')) {
-			$data['type'] = self::HTML;
+			$type = self::HTML;
 		} elseif (($filetype == 'text') && ($subtype == 'xml')) {
-			$data['type'] = self::XML;
+			$type = self::XML;
 		} elseif (($filetype == 'text') && ($subtype == 'plain')) {
-			$data['type'] = self::PLAIN;
+			$type = self::PLAIN;
 		} elseif ($filetype == 'text') {
-			$data['type'] = self::TEXT;
+			$type = self::TEXT;
 		} elseif (($filetype == 'application') && ($subtype == 'x-bittorrent')) {
-			$data['type'] = self::TORRENT;
+			$type = self::TORRENT;
 		} elseif ($filetype == 'application') {
-			$data['type'] = self::APPLICATION;
+			$type = self::APPLICATION;
 		} else {
-			$data['type'] = self::UNKNOWN;
-			Logger::info('Unknown type', ['filetype' => $filetype, 'subtype' => $subtype, 'media' => $data]);
-			return $data;
+			$type = self::UNKNOWN;
+			Logger::info('Unknown type', ['filetype' => $filetype, 'subtype' => $subtype, 'media' => $mimeType]);
 		}
 
-		Logger::debug('Detected type', ['filetype' => $filetype, 'subtype' => $subtype, 'media' => $data]);
-		return $data;
+		Logger::debug('Detected type', ['filetype' => $filetype, 'subtype' => $subtype, 'media' => $mimeType]);
+		return $type;		
 	}
 
 	/**

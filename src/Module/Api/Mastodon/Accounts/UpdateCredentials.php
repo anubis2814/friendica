@@ -100,12 +100,12 @@ class UpdateCredentials extends BaseApi
 		User::update($user, $uid);
 		Profile::update($profile, $uid);
 
-		$cdata = Contact::getPublicAndUserContactID($owner['id'], $uid);
-		if (empty($cdata)) {
+		$ucid = Contact::getUserContactId($owner['id'], $uid);
+		if (!$ucid) {
 			DI::mstdnError()->InternalError();
 		}
 
-		$account = DI::mstdnAccount()->createFromContactId($cdata['user'], $uid);
+		$account = DI::mstdnAccount()->createFromContactId($ucid, $uid);
 		$this->response->addJsonContent($account->toArray());
 	}
 }

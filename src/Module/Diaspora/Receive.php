@@ -25,6 +25,8 @@ use Friendica\App;
 use Friendica\BaseModule;
 use Friendica\Core\Config\Capability\IManageConfigValues;
 use Friendica\Core\L10n;
+use Friendica\Core\Protocol;
+use Friendica\Model\Item;
 use Friendica\Model\User;
 use Friendica\Module\Response;
 use Friendica\Network\HTTPException;
@@ -56,6 +58,8 @@ class Receive extends BaseModule
 			$this->logger->info('Diaspora disabled.');
 			throw new HTTPException\ForbiddenException($this->t('Access denied.'));
 		}
+
+		Item::incrementInbound(Protocol::DIASPORA);
 
 		if ($this->parameters['type'] === 'public') {
 			$this->receivePublic();

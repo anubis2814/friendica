@@ -35,6 +35,12 @@ use Friendica\Util\XML;
  */
 class Babel extends BaseModule
 {
+	protected function post(array $request = [])
+	{
+		// @todo check if POST is really used here
+		$this->content($request);
+	}
+
 	protected function content(array $request = []): string
 	{
 		function visible_whitespace($s)

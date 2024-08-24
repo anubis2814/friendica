@@ -29,12 +29,14 @@ use Friendica\DI;
 use Friendica\Model\APContact;
 use Friendica\Model\Contact;
 use Friendica\Model\GServer;
+use Friendica\Model\Item;
 use Friendica\Model\ItemURI;
 use Friendica\Model\User;
 use Friendica\Network\HTTPClient\Capability\ICanHandleHttpResponses;
 use Friendica\Network\HTTPClient\Client\HttpClientAccept;
 use Friendica\Network\HTTPClient\Client\HttpClientOptions;
 use Friendica\Network\HTTPClient\Client\HttpClientRequest;
+use Friendica\Protocol\ActivityPub\Receiver;
 
 /**
  * Implements HTTP Signatures per draft-cavage-http-signatures-07.
@@ -309,7 +311,58 @@ class HTTPSignature
 
 		self::setInboxStatus($target, ($return_code >= 200) && ($return_code <= 299));
 
+		Item::incrementOutbound(Protocol::ACTIVITYPUB);
+
 		return $postResult;
+	}
+
+	/**
+	 * Route activities locally
+	 *
+	 * @param array  $data
+	 * @param string $target
+	 * @param array  $owner
+	 * @return boolean
+	 */
+	private static function routeLocal(array $data, string $target, array $owner): bool
+	{
+		$uid = self::getUserIdForInbox($target);
+		if (is_null($uid)) {
+			return false;
+		}
+
+		$activity = JsonLD::compact($data);
+		$type = JsonLD::fetchElement($activity, '@type');
+		$trust_source = true;
+		$object_data = Receiver::prepareObjectData($activity, $uid, true, $trust_source, $owner['url']);
+		if (empty($object_data)) {
+			return false;
+		}
+
+		Logger::debug('Process directly', ['uid' => $uid, 'target' => $target, 'type' => $type]);
+		return Receiver::routeActivities($object_data, $type, true, true, $uid);
+	}
+
+	/**
+	 * Fetch the user id for a given inbox
+	 *
+	 * @param string $inbox
+	 * @return integer|null
+	 */
+	private static function getUserIdForInbox(string $inbox): ?int
+	{
+		$gsid = GServer::getID(DI::baseUrl());
+		if (!$gsid) {
+			return null;
+		}
+		if (DBA::exists('apcontact', ['gsid' => $gsid, 'sharedinbox' => $inbox])) {
+			return 0;
+		}
+		$apcontact = DBA::selectFirst('apcontact', ['url'], ['gsid' => $gsid, 'inbox' => $inbox]);
+		if (empty($apcontact['url'])) {
+			return null;
+		}
+		return User::getIdForURL($apcontact['url']);
 	}
 
 	/**
@@ -323,6 +376,10 @@ class HTTPSignature
 	 */
 	public static function transmit(array $data, string $target, array $owner): bool
 	{
+		if (DI::baseUrl()->isLocalUrl($target) && self::routeLocal($data, $target, $owner)) {
+			return true;
+		}
+
 		$postResult = self::post($data, $target, $owner);
 		$return_code = $postResult->getReturnCode();
 

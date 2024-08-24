@@ -71,13 +71,13 @@ class Destroy extends ContactEndpoint
 		}
 
 		// Get Contact by given id
-		$cdata = Contact::getPublicAndUserContactID($contact_id, $uid);
-		if (!empty($cdata['user'])) {
+		$ucid = Contact::getUserContactId($contact_id, $uid);
+		if (!$ucid) {
 			Logger::notice(BaseApi::LOG_PREFIX . 'Not following contact', ['module' => 'api', 'action' => 'friendships_destroy']);
 			throw new HTTPException\NotFoundException('Not following Contact');
 		}
 
-		$contact = Contact::getById($cdata['user']);
+		$contact = Contact::getById($ucid);
 		$user    = $this->twitterUser->createFromContactId($contact_id, $uid, true)->toArray();
 
 		try {

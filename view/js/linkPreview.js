@@ -200,7 +200,7 @@
 			if (!isExtern) {
 				return;
 			}
-			var bbcode = '\n[img]' + data.url + '[/img]\n';
+			var bbcode = '\n[img=' + data.url + '][/img]\n';
 			addeditortext(bbcode);
 		};
 

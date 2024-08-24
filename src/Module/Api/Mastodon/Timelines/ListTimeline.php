@@ -110,8 +110,7 @@ class ListTimeline extends BaseApi
 
 	private function getStatusesForGroup(int $uid, array $request): array
 	{
-		$cdata = Contact::getPublicAndUserContactID((int)substr($this->parameters['id'], 6), $uid);
-		$cid = $cdata['public'];
+		$cid = Contact::getPublicContactId((int)substr($this->parameters['id'], 6), $uid);
 
 		$condition = ["(`uid` = ? OR (`uid` = ? AND NOT `global`))", 0, $uid];
 

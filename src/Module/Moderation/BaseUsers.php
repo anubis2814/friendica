@@ -22,6 +22,7 @@
 namespace Friendica\Module\Moderation;
 
 use Friendica\App;
+use Friendica\Core\Hook;
 use Friendica\Core\L10n;
 use Friendica\Core\Renderer;
 use Friendica\Core\Session\Capability\IHandleUserSessions;
@@ -106,9 +107,11 @@ abstract class BaseUsers extends BaseModeration
 				'accesskey' => 'd',
 			],
 		];
+		$tabs_arr = ['tabs' => $tabs, 'selectedTab' => $selectedTab];
+		Hook::callAll('moderation_users_tabs', $tabs_arr);
 
 		$tpl = Renderer::getMarkupTemplate('common_tabs.tpl');
-		return Renderer::replaceMacros($tpl, ['$tabs' => $tabs]);
+		return Renderer::replaceMacros($tpl, ['$tabs' => $tabs_arr['tabs']]);
 	}
 
 	protected function setupUserCallback(): \Closure

@@ -198,6 +198,10 @@ class Item
 			$fields['external-id'] = ItemURI::getIdByURI($fields['extid']);
 		}
 
+		if (!empty($fields['replies'])) {
+			$fields['replies-id'] = ItemURI::getIdByURI($fields['replies']);
+		}
+
 		if (!empty($fields['verb'])) {
 			$fields['vid'] = Verb::getID($fields['verb']);
 		}
@@ -415,8 +419,24 @@ class Item
 			self::markForDeletion(['parent' => $item['parent'], 'deleted' => false], $priority);
 		}
 
+		if ($item['uid'] == 0 && $item['gravity'] == self::GRAVITY_PARENT) {
+			$posts = DI::keyValue()->get('nodeinfo_total_posts') ?? 0;
+			DI::keyValue()->set('nodeinfo_total_posts', $posts - 1);
+		} elseif ($item['uid'] == 0 && $item['gravity'] == self::GRAVITY_COMMENT) {
+			$comments = DI::keyValue()->get('nodeinfo_total_comments') ?? 0;
+			DI::keyValue()->set('nodeinfo_total_comments', $comments - 1);
+		}
+
 		// Is it our comment and/or our thread?
 		if (($item['origin'] || $parent['origin']) && ($item['uid'] != 0)) {
+			if ($item['origin'] && $item['gravity'] == self::GRAVITY_PARENT) {
+				$posts = DI::keyValue()->get('nodeinfo_local_posts') ?? 0;
+				DI::keyValue()->set('nodeinfo_local_posts', $posts - 1);
+			} elseif ($item['origin'] && $item['gravity'] == self::GRAVITY_COMMENT) {
+				$comments = DI::keyValue()->get('nodeinfo_local_comments') ?? 0;
+				DI::keyValue()->set('nodeinfo_local_comments', $comments - 1);
+			}
+
 			// When we delete the original post we will delete all existing copies on the server as well
 			self::markForDeletion(['uri-id' => $item['uri-id'], 'deleted' => false], $priority);
 
@@ -536,9 +556,9 @@ class Item
 		}
 
 		if (!empty($item['causer-id']) && Contact::isSharing($item['causer-id'], $item['uid'], true)) {
-			$cdata = Contact::getPublicAndUserContactID($item['causer-id'], $item['uid']);
-			if (!empty($cdata['user'])) {
-				return $cdata['user'];
+			$ucid = Contact::getUserContactId($item['causer-id'], $item['uid']);
+			if ($ucid) {
+				return $ucid;
 			}
 		}
 
@@ -1077,6 +1097,10 @@ class Item
 			$parent_id = 0;
 			$parent_origin = $item['origin'];
 
+			if ($item['wall'] && empty($item['context'])) {
+				$item['context'] = $item['parent-uri'] . '#context';
+			}
+
 			if ($item['wall'] && empty($item['conversation'])) {
 				$item['conversation'] = $item['parent-uri'] . '#context';
 			}
@@ -1096,6 +1120,10 @@ class Item
 
 		if (!empty($item['conversation']) && empty($item['conversation-id'])) {
 			$item['conversation-id'] = ItemURI::getIdByURI($item['conversation']);
+		}
+
+		if (!empty($item['context']) && empty($item['context-id'])) {
+			$item['context-id'] = ItemURI::getIdByURI($item['context']);
 		}
 
 		// Is this item available in the global items (with uid=0)?
@@ -1163,6 +1191,10 @@ class Item
 
 		if (!empty($item['extid'])) {
 			$item['external-id'] = ItemURI::getIdByURI($item['extid']);
+		}
+
+		if (!empty($item['replies'])) {
+			$item['replies-id'] = ItemURI::getIdByURI($item['replies']);
 		}
 
 		if ($item['verb'] == Activity::ANNOUNCE) {
@@ -1334,6 +1366,14 @@ class Item
 			return 0;
 		}
 
+		if ($posted_item['origin'] && $posted_item['gravity'] == self::GRAVITY_PARENT) {
+			$posts = (int)(DI::keyValue()->get('nodeinfo_local_posts') ?? 0);
+			DI::keyValue()->set('nodeinfo_local_posts', $posts + 1);
+		} elseif ($posted_item['origin'] && $posted_item['gravity'] == self::GRAVITY_COMMENT) {
+			$comments = (int)(DI::keyValue()->get('nodeinfo_local_comments') ?? 0);
+			DI::keyValue()->set('nodeinfo_local_comments', $comments + 1);
+		}
+
 		Post\Origin::insert($posted_item);
 
 		// update the commented timestamp on the parent
@@ -1423,6 +1463,14 @@ class Item
 		}
 
 		if ($inserted) {
+			if ($posted_item['gravity'] == self::GRAVITY_PARENT) {
+				$posts = (int)(DI::keyValue()->get('nodeinfo_total_posts') ?? 0);
+				DI::keyValue()->set('nodeinfo_total_posts', $posts + 1);
+			} elseif ($posted_item['gravity'] == self::GRAVITY_COMMENT) {
+				$comments = (int)(DI::keyValue()->get('nodeinfo_total_comments') ?? 0);
+				DI::keyValue()->set('nodeinfo_total_comments', $comments + 1);
+			}
+
 			// Fill the cache with the rendered content.
 			if (in_array($posted_item['gravity'], [self::GRAVITY_PARENT, self::GRAVITY_COMMENT])) {
 				self::updateDisplayCache($posted_item['uri-id']);
@@ -2584,12 +2632,12 @@ class Item
 			return;
 		}
 
-		$cdata = Contact::getPublicAndUserContactID($item['author-id'], $item['uid']);
-		if (empty($cdata['user']) || ($cdata['user'] != $item['contact-id'])) {
+		$ucid = Contact::getUserContactId($item['author-id'], $item['uid']);
+		if (!$ucid || ($ucid != $item['contact-id'])) {
 			return;
 		}
 
-		if (!DBA::exists('contact', ['id' => $cdata['user'], 'remote_self' => LocalRelationship::MIRROR_NATIVE_RESHARE])) {
+		if (!DBA::exists('contact', ['id' => $ucid, 'remote_self' => LocalRelationship::MIRROR_NATIVE_RESHARE])) {
 			return;
 		}
 
@@ -4118,6 +4166,10 @@ class Item
 			return $item_id;
 		}
 
+		if (ActivityPub\Processor::alreadyKnown($uri, '')) {
+			return 0;
+		}
+
 		$hookData = [
 			'uri'     => $uri,
 			'uid'     => $uid,
@@ -4212,5 +4264,23 @@ class Item
 
 		Logger::warning('Post does not exist although it was supposed to had been fetched.', ['id' => $id, 'url' => $url, 'uid' => $uid]);
 		return 0;
+	}
+
+	public static function incrementInbound(string $network)
+	{
+		$packets = (int)(DI::keyValue()->get('stats_packets_inbound_' . $network) ?? 0);
+		if ($packets >= PHP_INT_MAX) {
+			$packets = 0;
+		}
+		DI::keyValue()->set('stats_packets_inbound_' . $network, $packets + 1);
+	}
+
+	public static function incrementOutbound(string $network)
+	{
+		$packets = (int)(DI::keyValue()->get('stats_packets_outbound_' . $network) ?? 0);
+		if ($packets >= PHP_INT_MAX) {
+			$packets = 0;
+		}
+		DI::keyValue()->set('stats_packets_outbound_' . $network, $packets + 1);
 	}
 }

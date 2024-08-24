@@ -78,4 +78,5 @@ Help
 **About**
 
 * [Server Information](friendica)
+* [Terms of Service](tos)
 * [Credits](credits)

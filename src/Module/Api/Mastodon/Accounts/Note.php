@@ -45,12 +45,12 @@ class Note extends BaseApi
 			'comment' => '',
 		], $request);
 
-		$cdata = Contact::getPublicAndUserContactID($this->parameters['id'], $uid);
-		if (empty($cdata['user'])) {
+		$ucid = Contact::getUserContactId($this->parameters['id'], $uid);
+		if (!$ucid) {
 			$this->logAndJsonError(404, $this->errorFactory->RecordNotFound());
 		}
 
-		Contact::update(['info' => $request['comment']], ['id' => $cdata['user']]);
+		Contact::update(['info' => $request['comment']], ['id' => $ucid]);
 
 		$this->jsonExit(DI::mstdnRelationship()->createFromContactId($this->parameters['id'], $uid)->toArray());
 	}

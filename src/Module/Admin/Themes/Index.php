@@ -29,6 +29,12 @@ use Friendica\Util\Strings;
 
 class Index extends BaseAdmin
 {
+	protected function post(array $request = [])
+	{
+		// @todo check if POST is really used here
+		$this->content($request);
+	}
+
 	protected function content(array $request = []): string
 	{
 		parent::content();

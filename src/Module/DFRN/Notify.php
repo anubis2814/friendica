@@ -22,8 +22,10 @@
 namespace Friendica\Module\DFRN;
 
 use Friendica\BaseModule;
+use Friendica\Core\Protocol;
 use Friendica\Model\Contact;
 use Friendica\Model\Conversation;
+use Friendica\Model\Item;
 use Friendica\Model\User;
 use Friendica\Module\Response;
 use Friendica\Network\HTTPException;
@@ -44,6 +46,8 @@ class Notify extends BaseModule
 		if (empty($postdata)) {
 			throw new HTTPException\BadRequestException();
 		}
+
+		Item::incrementInbound(Protocol::DFRN);
 
 		$data = json_decode($postdata);
 		if (is_object($data) && !empty($this->parameters['nickname'])) {

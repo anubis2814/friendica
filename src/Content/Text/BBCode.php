@@ -1364,7 +1364,7 @@ class BBCode
 				// At a later stage we won't be able to exclude certain parts of the code.
 				$text = self::performWithEscapedTags($text, ['url', 'img', 'audio', 'video', 'youtube', 'vimeo', 'share', 'attachment', 'iframe', 'bookmark', 'map', 'oembed'], function ($text) use ($simple_html, $for_plaintext) {
 					if (!$for_plaintext) {
-						$text = preg_replace(Strings::autoLinkRegEx(), '[url]$1[/url]', $text);
+						$text = preg_replace(Strings::autoLinkRegEx(), '[url]$1[/url]', $text) ?? '';
 					}
 					return self::convertSmileysToHtml($text, $simple_html, $for_plaintext);
 				});
@@ -2090,7 +2090,7 @@ class BBCode
 		$text = preg_replace("/\[zrl\=(.*?)\](.*?)\[\/zrl\]/ism", '[url=$1]$2[/url]', $text);
 
 		if (in_array($simple_html, [self::INTERNAL, self::EXTERNAL, self::DIASPORA, self::OSTATUS, self::MASTODON_API, self::TWITTER_API, self::ACTIVITYPUB])) {
-			$text = self::shortenLinkDescription($text);
+			$text = self::shortenLinkDescription($text, $simple_html);
 		} else {
 			$text = self::unifyLinks($text);
 		}
@@ -2124,7 +2124,12 @@ class BBCode
 		}
 
 		$parts['host'] = idn_to_ascii(urldecode($parts['host']));
-		return (string)Uri::fromParts($parts);
+		try {
+			return (string)Uri::fromParts($parts);
+		} catch (\Throwable $th) {
+			Logger::notice('Exception on unparsing url', ['url' => $url, 'parts' => $parts, 'code' => $th->getCode(), 'message' => $th->getMessage()]);
+			return $url;
+		}
 	}
 
 	private static function unifyLinks(string $text): string
@@ -2138,20 +2143,26 @@ class BBCode
 		);
 	}
 
-	private static function shortenLinkDescription(string $text): string
+	private static function shortenLinkDescription(string $text, int $simple_html): string
 	{
+		if ($simple_html == self::INTERNAL) {
+			$max_length = DI::config()->get('system', 'display_link_length');
+		} else {
+			$max_length = 30;
+		}
+
 		$text = preg_replace_callback(
 			"/\[url\](.*?)\[\/url\]/ism",
-			function ($match) {
-				return "[url=" . self::escapeUrl($match[1]) . "]" . Strings::getStyledURL($match[1]) . "[/url]";
+			function ($match) use ($max_length) {
+				return "[url=" . self::escapeUrl($match[1]) . "]" . Strings::getStyledURL($match[1], $max_length) . "[/url]";
 			},
 			$text
 		);
 		$text = preg_replace_callback(
 			"/\[url\=(.*?)\](.*?)\[\/url\]/ism",
-			function ($match) {
+			function ($match) use ($max_length) {
 				if ($match[1] == $match[2]) {
-					return "[url=" . self::escapeUrl($match[1]) . "]" . Strings::getStyledURL($match[2]) . "[/url]";
+					return "[url=" . self::escapeUrl($match[1]) . "]" . Strings::getStyledURL($match[2], $max_length) . "[/url]";
 				} else {
 					return "[url=" . self::escapeUrl($match[1]) . "]" . $match[2] . "[/url]";
 				}
@@ -2641,7 +2652,7 @@ class BBCode
 					$bbcode = "\n" . '[audio]' . $url . '[/audio]' . "\n";
 					break;
 				default:
-					$bbcode = "\n" . '[img]' . $url . '[/img]' . "\n";
+					$bbcode = "\n" . '[img=' . $url . '][/img]' . "\n";
 					break;
 			}
 

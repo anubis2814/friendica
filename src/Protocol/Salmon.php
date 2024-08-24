@@ -22,7 +22,9 @@
 namespace Friendica\Protocol;
 
 use Friendica\Core\Logger;
+use Friendica\Core\Protocol;
 use Friendica\DI;
+use Friendica\Model\Item;
 use Friendica\Network\HTTPClient\Client\HttpClientAccept;
 use Friendica\Network\HTTPClient\Client\HttpClientRequest;
 use Friendica\Network\Probe;
@@ -226,6 +228,7 @@ class Salmon
 			$return_code = $postResult->getReturnCode();
 		}
 
+		Item::incrementOutbound(Protocol::OSTATUS);
 		Logger::info('slapper for ' . $url . ' returned ' . $return_code);
 
 		if (!$return_code) {

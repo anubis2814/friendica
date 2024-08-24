@@ -1,0 +1,29 @@
+version = 1
+SPDX-PackageName = "Friendica"
+SPDX-PackageSupplier = "Friendica Project <info@friendi.ca>"
+SPDX-PackageDownloadLocation = "https://friendi.ca"
+
+[[annotations]]
+path = "doc/**"
+SPDX-FileCopyrightText = "2010-2024 The Friendica Project"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = "view/theme/frio/frameworks/bootstrap/**"
+SPDX-FileCopyrightText = "2011-2019 Twitter, Inc."
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "view/theme/frio/frameworks/bootstrap-colorpicker/**"
+SPDX-FileCopyrightText = "2012 Stefan Petre"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "view/theme/frio/frameworks/bootstrap-select/**"
+SPDX-FileCopyrightText = "2013-2026 bootstrap-select"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "view/theme/frio/frameworks/bootstrap-toggle/**"
+SPDX-FileCopyrightText = "2014 Min Hur, The New York Times Company"
+SPDX-License-Identifier = "MIT"

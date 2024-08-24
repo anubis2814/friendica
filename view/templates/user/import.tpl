@@ -1,4 +1,4 @@
-<form action="uimport" method="post" id="uimport-form" enctype="multipart/form-data">
+<form action="user/import" method="post" id="uimport-form" enctype="multipart/form-data">
 	<h2>{{$import.title}}</h2>
 	<p>{{$import.intro}}</p>
 	<p>{{$import.instruct}}</p>

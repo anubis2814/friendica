@@ -168,7 +168,7 @@ class Unfollow extends \Friendica\BaseModule
 			$this->baseUrl->redirect($base_return_path);
 		}
 
-		$return_path = $base_return_path . '/' . $contact['id'];
+		$return_path = $base_return_path . '/' . Contact::getPublicContactId($contact['id'], $uid);
 
 		try {
 			Contact::unfollow($contact);

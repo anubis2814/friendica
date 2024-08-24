@@ -21,7 +21,6 @@
 
 namespace Friendica\Module\Api\Mastodon;
 
-use Friendica\Core\System;
 use Friendica\DI;
 use Friendica\Model\Contact;
 use Friendica\Module\BaseApi;
@@ -47,12 +46,12 @@ class FollowRequests extends BaseApi
 		$this->checkAllowedScope(self::SCOPE_FOLLOW);
 		$uid = self::getCurrentUserID();
 
-		$cdata = Contact::getPublicAndUserContactID($this->parameters['id'], $uid);
-		if (empty($cdata['user'])) {
+		$ucid = Contact::getUserContactId($this->parameters['id'], $uid);
+		if (!$ucid) {
 			throw new HTTPException\NotFoundException('Contact not found');
 		}
 
-		$introduction = DI::intro()->selectForContact($cdata['user']);
+		$introduction = DI::intro()->selectForContact($ucid);
 
 		$contactId = $introduction->cid;
 

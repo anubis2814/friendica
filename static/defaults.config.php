@@ -259,6 +259,10 @@ return [
 		// Display the first resharer as icon and text on a reshared item.
 		'display_resharer' => false,
 
+		// display_link_length (integer)
+		// Maximum length of displayed links. Default value is 30, 0 deactivates the functionality.
+		'display_link_length' => 30,
+
 		// dlogfile (Path)
 		// location of the developer log file.
 		'dlogfile' => '',
@@ -384,6 +388,10 @@ return [
 		// Maximum number of feed items that are fetched and processed. For unlimited items set to 0.
 		'max_feed_items' => 20,
 
+		// max_fetchreplies_depth (Integer)
+		// Maximum number of "fetchreplies" activities in the callstack. The higher, the more complete a thread will be.
+		'max_fetchreplies_depth' => 2,
+
 		// max_image_length (Integer)
 		// An alternate way of limiting picture upload sizes.
 		// Specify the maximum pixel length that pictures are allowed to be (for non-square pictures, it will apply to the longest side).
@@ -449,6 +457,15 @@ return [
 		// Optimizes all tables instead of only tables like workerqueue or the cache
 		'optimize_all_tables' => false,
 
+		// page_execution_logfile (Path)
+		// Name of a logfile to log slow page executions.
+		'page_execution_logfile' => '',
+
+		// page_execution_log_limit (Integer)
+		// If a page execution lasts longer than this value in seconds it is logged.
+		// Inactive if system => page_execution_logfile is empty.
+		'page_execution_log_limit' => 2,
+
 		// paranoia (Boolean)
 		// Log out users if their IP address changed.
 		'paranoia' => false,
@@ -469,6 +486,14 @@ return [
 		// Enable internal timings to help optimize code. Needed for "rendertime" addon.
 		'profiler' => false,
 
+		// queue_expired_days (Integer)
+		// Number of days after unprocessed inbox items are removed from the queue. Minimum is 1.
+		'queue_expired_days' => 7,
+
+		// queue_retrial (Integer)
+		// Number of retrial after unprocessed inbox items are removed from the queue. Minimum is 3.
+		'queue_retrial' => 10,
+
 		// redis_host (String)
 		// Host name or the path to the Unix domain socket of the Redis daemon.
 		'redis_host' => '127.0.0.1',
@@ -488,6 +513,12 @@ return [
 		// redistribute_activities (Boolean)
 		// Redistribute incoming activities via ActivityPub
 		'redistribute_activities' => true,
+
+		// remove_all_unused_contacts (Boolean)
+		// Remove all unused contacts.
+		// Per default only archived contacts are removed from federated services.
+		// Unused contacts from connector networks will be removed in any case.
+		'remove_all_unused_contacts' => false,
 
 		// session_handler (database|cache|native)
 		// Whether to use Cache to store session data or to use PHP native session storage.
@@ -538,6 +569,10 @@ return [
 		// show_unsupported_themes (Boolean)
 		// Show all themes including the unsupported ones.
 		'show_unsupported_themes' => false,
+
+		// stats_key (String)
+		// A random string to be added to the /stats?key=... endpoint to enable the monitoring statistics
+		'stats_key' => '',
 
 		// throttle_limit_day (Integer)
 		// Maximum number of posts that a user can send per day with the API. 0 to disable daily throttling.

@@ -29,6 +29,13 @@ use Friendica\Test\src\Module\Api\ApiTest;
 
 class NewDMTest extends ApiTest
 {
+	protected function setUp(): void
+	{
+		parent::setUp();
+
+		$this->useHttpMethod(Router::POST);
+	}
+
 	/**
 	 * Test the api_direct_messages_new() function.
 	 *

@@ -87,9 +87,11 @@ class GServer
 
 	// Standardized endpoints
 	const DETECT_STATISTICS_JSON = 100;
-	const DETECT_NODEINFO_1 = 101;
-	const DETECT_NODEINFO_2 = 102;
-	const DETECT_NODEINFO_210 = 103;
+	const DETECT_NODEINFO_10  = 101; // Nodeinfo Version 1.0
+	const DETECT_NODEINFO_20  = 102; // Nodeinfo Version 2.0
+	const DETECT_NODEINFO2_10 = 103; // Nodeinfo2 Version 1.0
+	const DETECT_NODEINFO_21  = 104; // Nodeinfo Version 2.1
+	const DETECT_NODEINFO_22  = 105; // Nodeinfo Version 2.2
 
 	/**
 	 * Check for the existence of a server and adds it in the background if not existant
@@ -612,7 +614,7 @@ class GServer
 		$in_webroot = empty(parse_url($url, PHP_URL_PATH));
 
 		// When a nodeinfo is present, we don't need to dig further
-		$curlResult = DI::httpClient()->get($url . '/.well-known/x-nodeinfo2', HttpClientAccept::JSON, [HttpClientOptions::REQUEST => HttpClientRequest::SERVERINFO]);
+		$curlResult = DI::httpClient()->get($url . '/.well-known/nodeinfo', HttpClientAccept::JSON, [HttpClientOptions::REQUEST => HttpClientRequest::SERVERINFO]);
 		if ($curlResult->isTimeout()) {
 			self::setFailureByUrl($url);
 			return false;
@@ -621,10 +623,11 @@ class GServer
 		if (!empty($network) && !in_array($network, Protocol::NATIVE_SUPPORT)) {
 			$serverdata = ['detection-method' => self::DETECT_MANUAL, 'network' => $network, 'platform' => '', 'version' => '', 'site_name' => '', 'info' => ''];
 		} else {
-			$serverdata = self::parseNodeinfo210($curlResult);
-			if (empty($serverdata)) {
-				$curlResult = DI::httpClient()->get($url . '/.well-known/nodeinfo', HttpClientAccept::JSON, [HttpClientOptions::REQUEST => HttpClientRequest::SERVERINFO]);
-				$serverdata = self::fetchNodeinfo($url, $curlResult);
+			$serverdata = self::parseNodeinfo($url, $curlResult);
+
+			if (empty($serverdata) || !in_array($serverdata['detection-method'], [self::DETECT_NODEINFO_20, self::DETECT_NODEINFO_21, self::DETECT_NODEINFO_22])) {
+				$curlResult = DI::httpClient()->get($url . '/.well-known/x-nodeinfo2', HttpClientAccept::JSON, [HttpClientOptions::REQUEST => HttpClientRequest::SERVERINFO]);
+				$serverdata = self::parseNodeinfo2($curlResult) ?: $serverdata;
 			}
 		}
 
@@ -1049,7 +1052,9 @@ class GServer
 	}
 
 	/**
-	 * Detect server type by using the nodeinfo data
+	 * Parses Nodeinfo
+	 *
+	 * @see https://github.com/jhass/nodeinfo
 	 *
 	 * @param string                  $url        address of the server
 	 * @param ICanHandleHttpResponses $httpResult
@@ -1058,7 +1063,7 @@ class GServer
 	 *
 	 * @throws \Friendica\Network\HTTPException\InternalServerErrorException
 	 */
-	private static function fetchNodeinfo(string $url, ICanHandleHttpResponses $httpResult): array
+	private static function parseNodeinfo(string $url, ICanHandleHttpResponses $httpResult): array
 	{
 		if (!$httpResult->isSuccess()) {
 			return [];
@@ -1072,6 +1077,7 @@ class GServer
 
 		$nodeinfo1_url = '';
 		$nodeinfo2_url = '';
+		$detection_method = self::DETECT_MANUAL;
 
 		foreach ($nodeinfo['links'] as $link) {
 			if (!is_array($link) || empty($link['rel']) || empty($link['href'])) {
@@ -1081,8 +1087,15 @@ class GServer
 
 			if ($link['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/1.0') {
 				$nodeinfo1_url = Network::addBasePath($link['href'], $httpResult->getUrl());
-			} elseif ($link['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0') {
+			} elseif (($detection_method < self::DETECT_NODEINFO_20) && ($link['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0')) {
 				$nodeinfo2_url = Network::addBasePath($link['href'], $httpResult->getUrl());
+				$detection_method = self::DETECT_NODEINFO_20;
+			} elseif (($detection_method < self::DETECT_NODEINFO_21) && ($link['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1')) {
+				$nodeinfo2_url = Network::addBasePath($link['href'], $httpResult->getUrl());
+				$detection_method = self::DETECT_NODEINFO_21;
+			} elseif (($detection_method < self::DETECT_NODEINFO_22) && ($link['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.2')) {
+				$nodeinfo2_url = Network::addBasePath($link['href'], $httpResult->getUrl());
+				$detection_method = self::DETECT_NODEINFO_22;
 			}
 		}
 
@@ -1093,18 +1106,20 @@ class GServer
 		$server = [];
 
 		if (!empty($nodeinfo2_url)) {
-			$server = self::parseNodeinfo2($nodeinfo2_url);
+			$server = self::parseNodeinfo_2($nodeinfo2_url, $detection_method);
 		}
 
 		if (empty($server) && !empty($nodeinfo1_url)) {
-			$server = self::parseNodeinfo1($nodeinfo1_url);
+			$server = self::parseNodeinfo_1($nodeinfo1_url);
 		}
 
 		return $server;
 	}
 
 	/**
-	 * Parses Nodeinfo 1
+	 * Parses Nodeinfo with the version 1.0
+	 *
+	 * @see https://github.com/jhass/nodeinfo/tree/main/schemas/1.0
 	 *
 	 * @param string $nodeinfo_url address of the nodeinfo path
 	 *
@@ -1112,7 +1127,7 @@ class GServer
 	 *
 	 * @throws \Friendica\Network\HTTPException\InternalServerErrorException
 	 */
-	private static function parseNodeinfo1(string $nodeinfo_url): array
+	private static function parseNodeinfo_1(string $nodeinfo_url): array
 	{
 		$curlResult = DI::httpClient()->get($nodeinfo_url, HttpClientAccept::JSON, [HttpClientOptions::REQUEST => HttpClientRequest::SERVERINFO]);
 		if (!$curlResult->isSuccess()) {
@@ -1125,8 +1140,10 @@ class GServer
 			return [];
 		}
 
-		$server = ['detection-method' => self::DETECT_NODEINFO_1,
-			'register_policy' => Register::CLOSED];
+		$server = [
+			'detection-method' => self::DETECT_NODEINFO_10,
+			'register_policy' => Register::CLOSED
+		];
 
 		if (!empty($nodeinfo['openRegistrations'])) {
 			$server['register_policy'] = Register::OPEN;
@@ -1202,17 +1219,20 @@ class GServer
 	}
 
 	/**
-	 * Parses Nodeinfo 2
+	 * Parses Nodeinfo with the versions 2.0, 2.1 and 2.2
 	 *
-	 * @see https://git.feneas.org/jaywink/nodeinfo2
+	 * @see https://github.com/jhass/nodeinfo/tree/main/schemas/2.0
+	 * @see https://github.com/jhass/nodeinfo/tree/main/schemas/2.1
+	 * @see https://github.com/jhass/nodeinfo/tree/main/schemas/2.2
 	 *
-	 * @param string $nodeinfo_url address of the nodeinfo path
+	 * @param string $nodeinfo_url     address of the nodeinfo path
+	 * @param int    $detection_method nodeinfo version
 	 *
 	 * @return array Server data
 	 *
 	 * @throws \Friendica\Network\HTTPException\InternalServerErrorException
 	 */
-	private static function parseNodeinfo2(string $nodeinfo_url): array
+	private static function parseNodeinfo_2(string $nodeinfo_url, int $detection_method): array
 	{
 		$curlResult = DI::httpClient()->get($nodeinfo_url, HttpClientAccept::JSON, [HttpClientOptions::REQUEST => HttpClientRequest::SERVERINFO]);
 		if (!$curlResult->isSuccess()) {
@@ -1225,13 +1245,22 @@ class GServer
 		}
 
 		$server = [
-			'detection-method' => self::DETECT_NODEINFO_2,
+			'detection-method' => $detection_method,
 			'register_policy' => Register::CLOSED,
 			'platform' => 'unknown',
 		];
 
 		if (!empty($nodeinfo['openRegistrations'])) {
 			$server['register_policy'] = Register::OPEN;
+		}
+
+		if (!empty($nodeinfo['instance'])) {
+			if (!empty($nodeinfo['instance']['name'])) {
+				$server['site_name'] = $nodeinfo['instance']['name'];
+			}
+			if (!empty($nodeinfo['instance']['description'])) {
+				$server['info'] = $nodeinfo['instance']['description'];
+			}
 		}
 
 		if (!empty($nodeinfo['software'])) {
@@ -1249,6 +1278,13 @@ class GServer
 				if (($server['platform'] == 'mastodon') && substr($nodeinfo['software']['version'], -5) == '-qoto') {
 					$server['platform'] = 'qoto';
 				}
+
+				if (isset($nodeinfo['software']['repository'])) {
+					$server['repository'] = strtolower($nodeinfo['software']['repository']);
+				}
+				if (isset($nodeinfo['software']['homepage'])) {
+					$server['homepage'] = strtolower($nodeinfo['software']['homepage']);
+				}
 			}
 		}
 
@@ -1259,6 +1295,9 @@ class GServer
 
 		if (!empty($nodeinfo['metadata']['nodeName'])) {
 			$server['site_name'] = $nodeinfo['metadata']['nodeName'];
+		}
+		if (!empty($nodeinfo['metadata']['nodeDescription'])) {
+			$server['info'] = $nodeinfo['metadata']['nodeDescription'];
 		}
 
 		if (!empty($nodeinfo['usage']['users']['total'])) {
@@ -1320,9 +1359,9 @@ class GServer
 	}
 
 	/**
-	 * Parses NodeInfo2 protocol 1.0
+	 * Parses NodeInfo2
 	 *
-	 * @see https://github.com/jaywink/nodeinfo2/blob/master/PROTOCOL.md
+	 * @see https://github.com/jaywink/nodeinfo2
 	 *
 	 * @param string $nodeinfo_url address of the nodeinfo path
 	 *
@@ -1330,7 +1369,7 @@ class GServer
 	 *
 	 * @throws \Friendica\Network\HTTPException\InternalServerErrorException
 	 */
-	private static function parseNodeinfo210(ICanHandleHttpResponses $httpResult): array
+	private static function parseNodeinfo2(ICanHandleHttpResponses $httpResult): array
 	{
 		if (!$httpResult->isSuccess()) {
 			return [];
@@ -1342,8 +1381,10 @@ class GServer
 			return [];
 		}
 
-		$server = ['detection-method' => self::DETECT_NODEINFO_210,
-			'register_policy' => Register::CLOSED];
+		$server = [
+			'detection-method' => self::DETECT_NODEINFO2_10,
+			'register_policy' => Register::CLOSED
+		];
 
 		if (!empty($nodeinfo['openRegistrations'])) {
 			$server['register_policy'] = Register::OPEN;
@@ -2567,6 +2608,10 @@ class GServer
 
 		$gserver = DBA::selectFirst('gserver', ['url', 'openwebauth'], ['id' => $data['gsid']]);
 		if (!DBA::isResult($gserver)) {
+			return;
+		}
+
+		if ($data['openwebauth'] == $gserver['openwebauth']) {
 			return;
 		}
 

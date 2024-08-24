@@ -21,14 +21,20 @@
 
 namespace Friendica\Module\Api\Mastodon\Trends;
 
+use Friendica\App;
+use Friendica\Core\Config\Capability\IManageConfigValues;
+use Friendica\Core\L10n;
 use Friendica\Core\Logger;
 use Friendica\Core\Protocol;
-use Friendica\Core\System;
 use Friendica\Database\DBA;
 use Friendica\DI;
 use Friendica\Model\Post;
+use Friendica\Module\Api\ApiResponse;
 use Friendica\Module\BaseApi;
+use Friendica\Module\Conversation\Community;
 use Friendica\Util\DateTimeFormat;
+use Friendica\Util\Profiler;
+use Psr\Log\LoggerInterface;
 
 /**
  * @see https://docs.joinmastodon.org/methods/trends/#statuses
@@ -36,10 +42,25 @@ use Friendica\Util\DateTimeFormat;
 class Statuses extends BaseApi
 {
 	/**
+	 * @var IManageConfigValues
+	 */
+	private $config;
+
+	public function __construct(IManageConfigValues $config, \Friendica\Factory\Api\Mastodon\Error $errorFactory, App $app, L10n $l10n, App\BaseURL $baseUrl, App\Arguments $args, LoggerInterface $logger, Profiler $profiler, ApiResponse $response, array $server, array $parameters = [])
+	{
+		parent::__construct($errorFactory, $app, $l10n, $baseUrl, $args, $logger, $profiler, $response, $server, $parameters);
+		$this->config = $config;
+	}
+
+	/**
 	 * @throws \Friendica\Network\HTTPException\InternalServerErrorException
 	 */
 	protected function rawContent(array $request = [])
 	{
+		if ($this->config->get('system', 'block_public') || $this->config->get('system', 'community_page_style') == Community::DISABLED_VISITOR) {
+			$this->checkAllowedScope(BaseApi::SCOPE_READ);
+		}
+
 		$uid = self::getCurrentUserID();
 
 		$request = $this->getRequest([

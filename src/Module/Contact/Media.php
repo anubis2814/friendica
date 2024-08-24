@@ -65,7 +65,7 @@ class Media extends BaseModule
 
 		$o = Contact::getTabsHTML($contact, Contact::TAB_MEDIA);
 
-		$o .= ModelContact::getPostsFromUrl($contact['url'], $this->userSession->getLocalUserId(), true);
+		$o .= ModelContact::getPostsFromUrl($contact['url'], $this->userSession->getLocalUserId(), true, $request['last_created'] ?? '');
 
 		return $o;
 	}

@@ -73,18 +73,18 @@ class Posts extends BaseModule
 
 		// Backward compatibility: Ensure to use the public contact when the user contact is provided
 		// Remove by version 2022.03
-		$data = Model\Contact::getPublicAndUserContactID(intval($this->parameters['id']), $this->userSession->getLocalUserId());
-		if (empty($data)) {
+		$pcid = Model\Contact::getPublicContactId(intval($this->parameters['id']), $this->userSession->getLocalUserId());
+		if (!$pcid) {
 			throw new NotFoundException($this->t('Contact not found.'));
 		}
 
-		$contact = Model\Contact::getById($data['public']);
+		$contact = Model\Contact::getById($pcid);
 		if (!DBA::isResult($contact)) {
 			throw new NotFoundException($this->t('Contact not found.'));
 		}
 
 		// Don't display contacts that are about to be deleted
-		if (DBA::isResult($contact) && (!empty($contact['deleted']) || !empty($contact['network']) && $contact['network'] == Protocol::PHANTOM)) {
+		if ($contact['deleted'] || $contact['network'] == Protocol::PHANTOM) {
 			throw new NotFoundException($this->t('Contact not found.'));
 		}
 

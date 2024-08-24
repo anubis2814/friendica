@@ -789,3 +789,21 @@ summary.wall-item-summary {
 	font-style: oblique;
   padding-bottom: 5px;
 }
+
+/* css instructions notification.tpl */
+/* Flexbox layout to align the icon and text in a single line */
+.notif-item a {
+    	display: flex;
+    	align-items: flex-start;
+}
+
+/* Margin to create space between the icon and the text */
+.notif-image {
+    	margin-right: 10px;
+
+/* Styles to ensure the text wraps properly after 70 characters */
+.notif-text {
+    	display: inline-block;
+    	max-width: 70ch;
+    	overflow-wrap: break-word;
+}

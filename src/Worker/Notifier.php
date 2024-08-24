@@ -655,6 +655,7 @@ class Notifier
 
 				$delivery_queue_count++;
 				Salmon::slapper($owner, $url, $slap);
+				Item::incrementOutbound(Protocol::OSTATUS);
 				Post\DeliveryData::incrementQueueDone($target_item['uri-id'], Post\DeliveryData::OSTATUS);
 			}
 		}

@@ -224,17 +224,17 @@ abstract class BaseModule implements ICanHandleRequests
 		switch ($this->args->getMethod()) {
 			case Router::DELETE:
 				$this->delete($request);
-				break;
+				return $this->response->generate();
 			case Router::PATCH:
 				$this->patch($request);
-				break;
+				return $this->response->generate();
 			case Router::POST:
 				Core\Hook::callAll($this->args->getModuleName() . '_mod_post', $request);
 				$this->post($request);
-				break;
+				return $this->response->generate();
 			case Router::PUT:
 				$this->put($request);
-				break;
+				return $this->response->generate();
 		}
 
 		$timestamp = microtime(true);
